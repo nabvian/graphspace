@@ -2,8 +2,8 @@
 
 ## Core
 
-- `Graph(name, resources=None)` creates a graph.
-- `TensorSpec(shape, dtype, layout, role)` describes a tensor. Dimensions are non-negative ints or non-empty symbolic names such as `"N"`.
+- `Graph(name, resources=None)` creates a graph. `graph.resources` must be a `ResourceContract`. `graph.nodes` returns `Node` values.
+- `TensorSpec(shape, dtype, layout, role)` describes a tensor. Dimensions are non-negative ints or non-empty symbolic names such as `"N"`. The only layout is `row_major`.
 - `ResourceContract.max_memory(bytes, deterministic=False)` declares limits.
 - `graph.input(name, spec)` adds an input. Names must be unique within the graph.
 - `graph.add(left, right)`, `graph.multiply(left, right)`, `graph.subtract(left, right)` create elementwise operations. Operands need identical shape, dtype, and layout; `role` may differ.

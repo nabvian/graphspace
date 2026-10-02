@@ -23,3 +23,5 @@
 - Benchmark suite with Python, NumPy, and PyTorch baselines
 - Pre-registered benchmark thresholds, calibration, and replication scripts
 - Apache-2.0 license
+- Typed package marker
+- Stable and experimental API defined in `docs/API_STABILITY.md`

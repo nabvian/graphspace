@@ -7,6 +7,7 @@ from typing import Any
 import hashlib
 import json
 import platform
+import threading
 
 from ._version import __version__
 from .claims import Basis, Claim, find_claim
@@ -14,6 +15,7 @@ from .failures import ContractViolation, DTypeMismatch, GraphspaceError, Resourc
 
 
 DTYPE_BYTES = {"float32": 4, "float16": 2, "int32": 4, "int64": 8}
+LAYOUTS = frozenset({"row_major"})
 FLOAT_DTYPES = frozenset({"float32", "float16"})
 INT_RANGES = {"int32": (-(2**31), 2**31 - 1), "int64": (-(2**63), 2**63 - 1)}
 ELEMENTWISE = frozenset({"add", "multiply", "subtract", "relu"})
@@ -39,6 +41,8 @@ class TensorSpec:
                 f"unsupported dtype: {self.dtype}",
                 expected=sorted(DTYPE_BYTES), actual=self.dtype,
             )
+        if self.layout not in LAYOUTS:
+            raise ContractViolation(f"unsupported layout: {self.layout}", expected=sorted(LAYOUTS), actual=self.layout)
         if isinstance(self.shape, (str, bytes)) or not isinstance(self.shape, Sequence):
             raise ShapeMismatch(f"invalid shape: {self.shape!r}", expected="sequence of dimensions", actual=self.shape)
         object.__setattr__(self, "shape", tuple(self.shape))
@@ -174,6 +178,20 @@ class Graph:
         self._nodes: list[Node] = []
         self._output: str | None = None
         self._prepared: dict[tuple, _Prepared] = {}
+        self._lock = threading.Lock()
+
+    @property
+    def resources(self) -> ResourceContract:
+        return self._resources
+
+    @resources.setter
+    def resources(self, value: ResourceContract) -> None:
+        if not isinstance(value, ResourceContract):
+            raise ContractViolation(
+                f"{self.name}: resources must be a ResourceContract",
+                graph=self.name, expected="ResourceContract", actual=type(value).__name__,
+            )
+        self._resources = value
 
     @property
     def inputs(self) -> dict[str, TensorSpec]:
@@ -400,8 +418,9 @@ class Graph:
 
     def _prepare(self, dims: Dims) -> _Prepared:
         key = (len(self._inputs), len(self._nodes), self._output, self.resources, tuple(sorted(dims.items())))
-        if key in self._prepared:
-            return self._prepared[key]
+        with self._lock:
+            if key in self._prepared:
+                return self._prepared[key]
         plan = self.memory_plan(dims)
         buffer = {value.name: value.buffer for value in plan.values}
         last_use = {value.name: value.last_use for value in plan.values}
@@ -428,9 +447,10 @@ class Graph:
             *self._contract_claims(plan),
         )
         prepared = _Prepared(plan, tuple(steps), _sha256(self._describe()), claims)
-        if len(self._prepared) >= PREPARED_CACHE_SIZE:
-            del self._prepared[next(iter(self._prepared))]
-        self._prepared[key] = prepared
+        with self._lock:
+            if key not in self._prepared and len(self._prepared) >= PREPARED_CACHE_SIZE:
+                del self._prepared[next(iter(self._prepared))]
+            self._prepared[key] = prepared
         return prepared
 
     def _contract_claims(self, plan: MemoryPlan) -> list[Claim]:

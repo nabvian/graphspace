@@ -36,3 +36,6 @@ version = { attr = "graphspace._version.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+graphspace = ["py.typed"]

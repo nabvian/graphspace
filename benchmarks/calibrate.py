@@ -50,11 +50,11 @@ def main(argv=None):
 
     rng = random.Random(args.seed)
     warmup, n = random_graph(random.Random(0), -1)
-    warmup.execute({name: np.ones((n, n), dtype=np.float32) for name in warmup.inputs}, backend="numpy")
+    warmup.execute({name: np.full((n, n), 1.0 / n, dtype=np.float32) for name in warmup.inputs}, backend="numpy")
     samples = []
     for index in range(args.graphs):
         graph, n = random_graph(rng, index)
-        arrays = {name: np.ones((n, n), dtype=np.float32) for name in graph.inputs}
+        arrays = {name: np.full((n, n), 1.0 / n, dtype=np.float32) for name in graph.inputs}
         inputs = sum(array.nbytes for array in arrays.values())
         cold = measure(graph, arrays) + inputs - tensor_estimate(graph)
         warm = measure(graph, arrays) + inputs - tensor_estimate(graph)

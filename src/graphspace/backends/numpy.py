@@ -22,6 +22,9 @@ class NumpyBackend:
         self.version = numpy.__version__
         self._python = PythonBackend()
 
+    def session(self):
+        return self.np.errstate(all="ignore")
+
     def length(self, name: str, data: Any) -> int:
         if isinstance(data, self.np.ndarray):
             return int(data.size)

@@ -1,4 +1,5 @@
 from collections.abc import Mapping, Sequence
+from contextlib import nullcontext
 from typing import Any
 import array
 import platform
@@ -12,6 +13,9 @@ from . import frame_digest
 class PythonBackend:
     name = "python"
     version = platform.python_version()
+
+    def session(self):
+        return nullcontext()
 
     def length(self, name: str, data: Any) -> int:
         if isinstance(data, (str, bytes)) or not isinstance(data, Sequence):

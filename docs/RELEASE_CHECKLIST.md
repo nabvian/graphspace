@@ -18,6 +18,7 @@
 - [x] Benchmark harness
 - [x] Baseline benchmark suite
 - [ ] CI matrix across supported Python versions
+- [x] Local test matrix: Python 3.10–3.14 × no NumPy, oldest NumPy wheel, latest NumPy
 - [ ] Published package and signed release artifacts
 - [ ] Large-scale real-world benchmark suite
 - [x] CI workflow configuration added

@@ -7,6 +7,7 @@ from typing import Any
 import hashlib
 import json
 import platform
+import sys
 import threading
 
 from ._version import __version__
@@ -22,9 +23,16 @@ ELEMENTWISE = frozenset({"add", "multiply", "subtract", "relu"})
 
 Dims = Mapping[str, int]
 PREPARED_CACHE_SIZE = 8
-BOOKKEEPING_BASE_BYTES = 6912
-BOOKKEEPING_INPUT_BYTES = 296
-BOOKKEEPING_NODE_BYTES = 368
+BOOKKEEPING_BY_VERSION = {
+    (3, 10): (10752, 808, 976),
+    (3, 11): (12352, 784, 936),
+    (3, 12): (7936, 280, 648),
+    (3, 13): (8064, 288, 664),
+    (3, 14): (6656, 280, 384),
+}
+BOOKKEEPING_BASE_BYTES, BOOKKEEPING_INPUT_BYTES, BOOKKEEPING_NODE_BYTES = BOOKKEEPING_BY_VERSION.get(
+    sys.version_info[:2], tuple(max(column) for column in zip(*BOOKKEEPING_BY_VERSION.values())),
+)
 PYTHON_VERSION = f"{platform.python_implementation()} {platform.python_version()}"
 
 
@@ -389,12 +397,13 @@ class Graph:
             digest_claims.append(Claim("inputs_sha256", impl.digest(
                 {name: (spec.dtype, computed[name]) for name, spec in self._inputs.items()}
             ), Basis.MEASURED))
-        for step in prepared.steps:
-            node = step.node
-            out = computed[step.out_source] if step.out_source is not None else None
-            computed[node.output] = impl.run(node, [computed[name] for name in node.inputs], step.in_shapes, step.out_shape, out)
-            for name in step.release:
-                del computed[name]
+        with impl.session():
+            for step in prepared.steps:
+                node = step.node
+                out = computed[step.out_source] if step.out_source is not None else None
+                computed[node.output] = impl.run(node, [computed[name] for name in node.inputs], step.in_shapes, step.out_shape, out)
+                for name in step.release:
+                    del computed[name]
         assert self._output is not None
         result = computed[self._output]
         if digests:

@@ -23,7 +23,7 @@ def add_graph(spec=TensorSpec((2, 2)), resources=None):
 class TestAnalysis(unittest.TestCase):
 
     def test_claims_carry_basis(self):
-        analysis = add_graph(resources=ResourceContract.max_memory(10_000, deterministic=True)).analyze()
+        analysis = add_graph(resources=ResourceContract.max_memory(48 + bookkeeping(2, 1), deterministic=True)).analyze()
         self.assertEqual(analysis.claim("shapes_consistent").basis, Basis.PROVEN)
         self.assertEqual(analysis.claim("output_spec").value, TensorSpec((2, 2)))
         self.assertEqual(analysis.claim("output_spec").basis, Basis.PROVEN)

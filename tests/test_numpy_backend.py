@@ -2,6 +2,7 @@ import importlib.util
 import math
 import tracemalloc
 import unittest
+import warnings
 
 from graphspace import Graph, ResourceContract, TensorSpec
 from graphspace.failures import (
@@ -147,6 +148,17 @@ class TestNumpyBackend(unittest.TestCase):
         self.assertEqual(result.shape, (2, 2))
         with self.assertRaises(ResourceLimitExceeded):
             graph.execute({"a": np.ones(6), "b": np.ones(6)}, backend="numpy")
+
+    def test_float_overflow_follows_ieee_without_warnings(self):
+        graph = binary_graph("multiply", TensorSpec((2,), "float32"))
+        values = {"a": np.array([3e38, 1.0], dtype=np.float32), "b": np.array([10.0, 0.0], dtype=np.float32)}
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result, _ = graph.execute(values, backend="numpy")
+        expected, _ = graph.execute({"a": [3e38, 1.0], "b": [10.0, 0.0]})
+        self.assertTrue(np.isinf(result[0]))
+        self.assertEqual(result[1], 0.0)
+        self.assertEqual(expected[1], 0.0)
 
     def test_relu_propagates_nan(self):
         graph = Graph("relu")

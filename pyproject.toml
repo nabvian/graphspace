@@ -26,6 +26,12 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 
+[project.urls]
+Homepage = "https://github.com/nabvian/graphspace"
+Source = "https://github.com/nabvian/graphspace"
+Issues = "https://github.com/nabvian/graphspace/issues"
+Changelog = "https://github.com/nabvian/graphspace/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
 numpy = ["numpy>=1.22"]
 

@@ -40,7 +40,7 @@ result, record = graph.execute(values, backend="numpy")
 PYTHONPATH=src python3 benchmarks/benchmark.py --output results.json
 ```
 
-Runs elementwise add, ReLU pipeline, matmul, MLP, and memory pipeline workloads against plain Python, NumPy, and PyTorch when installed. `--size quick full large xlarge` selects sizes; `large` and `xlarge` need NumPy. Results are judged against `docs/BENCHMARK_THRESHOLDS.md`.
+Runs elementwise add, ReLU pipeline, matmul, MLP, and memory pipeline workloads against plain Python, NumPy, and PyTorch when installed. `--size quick full large xlarge` selects sizes; `large` and `xlarge` need NumPy. Results are judged against [`docs/BENCHMARK_THRESHOLDS.md`](https://github.com/nabvian/graphspace/blob/main/docs/BENCHMARK_THRESHOLDS.md).
 
 ```bash
 PYTHONPATH=src python3 benchmarks/calibrate.py --seed 1
@@ -63,10 +63,10 @@ Repeats the benchmark in independent processes and judges the thresholds across 
 - The PyTorch adapter validates shape and dtype only.
 - Graphs have no conditional routing.
 
-Additional documentation is available in `docs/API.md` and `docs/RELEASE_CHECKLIST.md`.
+Additional documentation is available in [`docs/API.md`](https://github.com/nabvian/graphspace/blob/main/docs/API.md) and [`docs/RELEASE_CHECKLIST.md`](https://github.com/nabvian/graphspace/blob/main/docs/RELEASE_CHECKLIST.md).
 
-Project policies are documented in `SECURITY.md`, `CONTRIBUTING.md`, and `docs/API_STABILITY.md`.
+Project policies are documented in [`SECURITY.md`](https://github.com/nabvian/graphspace/blob/main/SECURITY.md), [`CONTRIBUTING.md`](https://github.com/nabvian/graphspace/blob/main/CONTRIBUTING.md), and [`docs/API_STABILITY.md`](https://github.com/nabvian/graphspace/blob/main/docs/API_STABILITY.md).
 
 ## License
 
-Licensed under the Apache License, Version 2.0. See `LICENSE`.
+Licensed under the Apache License, Version 2.0. See [`LICENSE`](https://github.com/nabvian/graphspace/blob/main/LICENSE).

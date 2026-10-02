@@ -32,3 +32,20 @@ A threshold fails if any workload at any listed size fails it.
 | 1 | 2026-10-02 | Apple M5 Pro, CPython 3.14.7, NumPy 2.5.3 | FAIL | FAIL | PASS | `benchmarks/results/2026-10-02-apple-m5-pro.json` |
 | 2 | 2026-10-02 | Apple M5 Pro, CPython 3.14.7, NumPy 2.5.3 | PASS | PASS | PASS | `benchmarks/results/2026-10-02-apple-m5-pro-round2.json` |
 | 3 | 2026-10-02 | Apple M5 Pro, CPython 3.14.7, NumPy 2.5.3, 10 runs | PASS | PASS | PASS | `benchmarks/results/round3-summary.json` |
+
+## Round 4: model blocks
+
+Fixed on 2026-10-02 and committed before its run. Run by `benchmarks/round4.py`: ten independent processes of `benchmarks/models.py --size model model_large`, seeds 0–9, comparing `graphspace_numpy` with ordinary NumPy code for the same block.
+
+- Workloads: `mlp` (784-512-512-10 classifier with bias vectors, ReLU, and softmax), `attention` (single-head self-attention with output projection, residual, and layer norm), and `transformer_ffn` (feed-forward block with residual and layer norm).
+- Sizes: `model` (batch 256, sequence 256) and `model_large` (batch 2048, sequence 2048). `smoke` is not evaluated.
+- Inputs are random with scaled weights; no trained weights or real data.
+
+| ID | Threshold |
+|---|---|
+| T0 | Both implementations match a float64 NumPy reference within 1e-3 of the output scale, in every run |
+| T1 | Median time ratio across the ten runs ≤ 1.10, for every workload and size |
+| T2 | Measured memory ≤ estimated peak, for every workload, size, and run |
+| T3 | Measured memory ≤ NumPy measured memory, for every workload, size, and run |
+
+The number of single runs passing each threshold is reported but does not decide the round. One machine only.

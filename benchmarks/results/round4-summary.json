@@ -1,0 +1,99 @@
+{
+  "source_sha256": "f2daee49ee4161a5636e960c7369efd3bda3c9f88b1a6f022870ccc9b4cb7260",
+  "runs": 10,
+  "sizes": [
+    "model",
+    "model_large"
+  ],
+  "environment": {
+    "timestamp": "2026-10-02T11:30:45.008087+00:00",
+    "os": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
+    "python": "CPython 3.14.7",
+    "cpu": "Apple M5 Pro",
+    "graphspace": "0.1.0",
+    "numpy": "2.5.3",
+    "torch": null,
+    "seed": 0,
+    "repetitions": 20,
+    "warmup": 3,
+    "sizes": [
+      "model",
+      "model_large"
+    ],
+    "input_generator": "numpy.random.default_rng uniform(-1, 1)",
+    "memory_method": "input storage + tracemalloc peak during the call; torch is not traced"
+  },
+  "verdict": {
+    "T0": {
+      "status": "PASS",
+      "failures": []
+    },
+    "T2": {
+      "status": "PASS",
+      "failures": []
+    },
+    "T3": {
+      "status": "PASS",
+      "failures": []
+    },
+    "T1": {
+      "status": "PASS",
+      "cells": [
+        {
+          "size": "model",
+          "workload": "attention",
+          "median_ratio": 1.042010780707453,
+          "min_ratio": 1.0349299049965,
+          "max_ratio": 1.0778236157772265,
+          "runs_within": 10
+        },
+        {
+          "size": "model",
+          "workload": "mlp",
+          "median_ratio": 1.0649861276209707,
+          "min_ratio": 1.0621307667995614,
+          "max_ratio": 1.0691631312277754,
+          "runs_within": 10
+        },
+        {
+          "size": "model",
+          "workload": "transformer_ffn",
+          "median_ratio": 1.0258366477204934,
+          "min_ratio": 1.022416270173802,
+          "max_ratio": 1.0275229507291634,
+          "runs_within": 10
+        },
+        {
+          "size": "model_large",
+          "workload": "attention",
+          "median_ratio": 0.9596745322871076,
+          "min_ratio": 0.957713450189689,
+          "max_ratio": 0.9634882166368961,
+          "runs_within": 10
+        },
+        {
+          "size": "model_large",
+          "workload": "mlp",
+          "median_ratio": 0.9973676096817614,
+          "min_ratio": 0.9893838044923734,
+          "max_ratio": 0.9989781111881502,
+          "runs_within": 10
+        },
+        {
+          "size": "model_large",
+          "workload": "transformer_ffn",
+          "median_ratio": 0.9550000573830713,
+          "min_ratio": 0.9534204623836349,
+          "max_ratio": 0.9576986436184386,
+          "runs_within": 10
+        }
+      ]
+    },
+    "single_run_passes": {
+      "T0": 10,
+      "T1": 10,
+      "T2": 10,
+      "T3": 10
+    }
+  }
+}

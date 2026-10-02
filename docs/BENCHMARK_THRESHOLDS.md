@@ -49,3 +49,9 @@ Fixed on 2026-10-02 and committed before its run. Run by `benchmarks/round4.py`:
 | T3 | Measured memory ≤ NumPy measured memory, for every workload, size, and run |
 
 The number of single runs passing each threshold is reported but does not decide the round. One machine only.
+
+### Round 4 results
+
+| Round | Date | Machine | T0 | T1 | T2 | T3 | Report |
+|---|---|---|---|---|---|---|---|
+| 4 | 2026-10-02 | Apple M5 Pro, CPython 3.14.7, NumPy 2.5.3, 10 runs | PASS | PASS | PASS | PASS | `benchmarks/results/round4-summary.json` |

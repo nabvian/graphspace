@@ -1,0 +1,320 @@
+{
+  "environment": {
+    "timestamp": "2026-10-02T11:30:47.256533+00:00",
+    "os": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
+    "python": "CPython 3.14.7",
+    "cpu": "Apple M5 Pro",
+    "graphspace": "0.1.0",
+    "numpy": "2.5.3",
+    "torch": null,
+    "seed": 2,
+    "repetitions": 20,
+    "warmup": 3,
+    "sizes": [
+      "model",
+      "model_large"
+    ],
+    "input_generator": "numpy.random.default_rng uniform(-1, 1)",
+    "memory_method": "input storage + tracemalloc peak during the call; torch is not traced"
+  },
+  "runs": [
+    {
+      "size": "model",
+      "workloads": [
+        {
+          "workload": "mlp",
+          "shapes": {
+            "x": [
+              256,
+              784
+            ],
+            "w1": [
+              784,
+              512
+            ],
+            "b1": [
+              512
+            ],
+            "w2": [
+              512,
+              512
+            ],
+            "b2": [
+              512
+            ],
+            "w3": [
+              512,
+              10
+            ],
+            "b3": [
+              10
+            ]
+          },
+          "estimated_peak_bytes": 4554944,
+          "implementations": {
+            "numpy": {
+              "median_ms": 0.33335399893985596,
+              "p95_ms": 0.3374170009919908,
+              "measured_peak_bytes": 5088664,
+              "max_abs_error": 1.044296304431036e-07,
+              "correct": true
+            },
+            "graphspace_numpy": {
+              "median_ms": 0.35510400084604044,
+              "p95_ms": 0.3741250002349261,
+              "measured_peak_bytes": 4532192,
+              "max_abs_error": 1.044296304431036e-07,
+              "correct": true
+            }
+          }
+        },
+        {
+          "workload": "attention",
+          "shapes": {
+            "x": [
+              256,
+              64
+            ],
+            "wq": [
+              64,
+              64
+            ],
+            "wk": [
+              64,
+              64
+            ],
+            "wv": [
+              64,
+              64
+            ],
+            "wo": [
+              64,
+              64
+            ],
+            "bo": [
+              64
+            ],
+            "gamma": [
+              64
+            ],
+            "beta": [
+              64
+            ]
+          },
+          "estimated_peak_bytes": 617984,
+          "implementations": {
+            "numpy": {
+              "median_ms": 0.17383300109941047,
+              "p95_ms": 0.18104199989465997,
+              "measured_peak_bytes": 1150448,
+              "max_abs_error": 6.950597140065184e-07,
+              "correct": true
+            },
+            "graphspace_numpy": {
+              "median_ms": 0.18168749920732807,
+              "p95_ms": 0.1839579999796115,
+              "measured_peak_bytes": 593304,
+              "max_abs_error": 6.950597140065184e-07,
+              "correct": true
+            }
+          }
+        },
+        {
+          "workload": "transformer_ffn",
+          "shapes": {
+            "x": [
+              256,
+              256
+            ],
+            "w1": [
+              256,
+              1024
+            ],
+            "b1": [
+              1024
+            ],
+            "w2": [
+              1024,
+              256
+            ],
+            "b2": [
+              256
+            ],
+            "gamma": [
+              256
+            ],
+            "beta": [
+              256
+            ]
+          },
+          "estimated_peak_bytes": 3701912,
+          "implementations": {
+            "numpy": {
+              "median_ms": 0.3311045002192259,
+              "p95_ms": 0.3366249984537717,
+              "measured_peak_bytes": 4497680,
+              "max_abs_error": 1.4265790855838567e-06,
+              "correct": true
+            },
+            "graphspace_numpy": {
+              "median_ms": 0.34002050051640254,
+              "p95_ms": 0.3444169997237623,
+              "measured_peak_bytes": 3679160,
+              "max_abs_error": 1.4265790855838567e-06,
+              "correct": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "size": "model_large",
+      "workloads": [
+        {
+          "workload": "mlp",
+          "shapes": {
+            "x": [
+              2048,
+              784
+            ],
+            "w1": [
+              784,
+              512
+            ],
+            "b1": [
+              512
+            ],
+            "w2": [
+              512,
+              512
+            ],
+            "b2": [
+              512
+            ],
+            "w3": [
+              512,
+              10
+            ],
+            "b3": [
+              10
+            ]
+          },
+          "estimated_peak_bytes": 17514688,
+          "implementations": {
+            "numpy": {
+              "median_ms": 2.5888335003401153,
+              "p95_ms": 2.620708000904415,
+              "measured_peak_bytes": 21718424,
+              "max_abs_error": 4.8330774216065464e-08,
+              "correct": true
+            },
+            "graphspace_numpy": {
+              "median_ms": 2.5861880003503757,
+              "p95_ms": 2.616125002532499,
+              "measured_peak_bytes": 17491936,
+              "max_abs_error": 4.8330774216065464e-08,
+              "correct": true
+            }
+          }
+        },
+        {
+          "workload": "attention",
+          "shapes": {
+            "x": [
+              2048,
+              64
+            ],
+            "wq": [
+              64,
+              64
+            ],
+            "wk": [
+              64,
+              64
+            ],
+            "wv": [
+              64,
+              64
+            ],
+            "wo": [
+              64,
+              64
+            ],
+            "bo": [
+              64
+            ],
+            "gamma": [
+              64
+            ],
+            "beta": [
+              64
+            ]
+          },
+          "estimated_peak_bytes": 18968064,
+          "implementations": {
+            "numpy": {
+              "median_ms": 7.190416499724961,
+              "p95_ms": 7.228916998428758,
+              "measured_peak_bytes": 52537840,
+              "max_abs_error": 9.436029397846823e-07,
+              "correct": true
+            },
+            "graphspace_numpy": {
+              "median_ms": 6.924312499904772,
+              "p95_ms": 7.186292001279071,
+              "measured_peak_bytes": 18943384,
+              "max_abs_error": 9.436029397846823e-07,
+              "correct": true
+            }
+          }
+        },
+        {
+          "workload": "transformer_ffn",
+          "shapes": {
+            "x": [
+              2048,
+              512
+            ],
+            "w1": [
+              512,
+              2048
+            ],
+            "b1": [
+              2048
+            ],
+            "w2": [
+              2048,
+              512
+            ],
+            "b2": [
+              512
+            ],
+            "gamma": [
+              512
+            ],
+            "beta": [
+              512
+            ]
+          },
+          "estimated_peak_bytes": 33593496,
+          "implementations": {
+            "numpy": {
+              "median_ms": 7.507771000746288,
+              "p95_ms": 7.533416999649489,
+              "measured_peak_bytes": 46185744,
+              "max_abs_error": 2.6238939145883933e-06,
+              "correct": true
+            },
+            "graphspace_numpy": {
+              "median_ms": 7.1580624990019714,
+              "p95_ms": 7.192500001110602,
+              "measured_peak_bytes": 33570744,
+              "max_abs_error": 2.6536962369760886e-06,
+              "correct": true
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -21,7 +21,9 @@
 - SHA-256 digest of the graph; optional digests of inputs and output
 - Structured failures with code, graph, node, expected, actual, and remediation
 - `Graph.analyze()` and claims labelled by basis
-- Add, subtract, multiply, relu, reshape, and matmul operations
+- Add, subtract, multiply, divide, scale, relu, reshape, transpose, matmul, softmax, and layer_norm operations
+- NumPy broadcasting for elementwise operations
+- Memory estimate reserves NumPy ufunc buffers and row scratch
 - Optional NumPy/PyTorch validation adapters
 - CLI, tests, and documentation
 - Benchmark suite with Python, NumPy, and PyTorch baselines

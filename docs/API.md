@@ -6,12 +6,16 @@
 - `TensorSpec(shape, dtype, layout, role)` describes a tensor. Dimensions are non-negative ints or non-empty symbolic names such as `"N"`. The only layout is `row_major`.
 - `ResourceContract.max_memory(bytes, deterministic=False)` declares limits.
 - `graph.input(name, spec)` adds an input. Names must be unique within the graph.
-- `graph.add(left, right)`, `graph.multiply(left, right)`, `graph.subtract(left, right)` create elementwise operations. Operands need identical shape, dtype, and layout; `role` may differ.
+- `graph.add(left, right)`, `graph.multiply(left, right)`, `graph.subtract(left, right)`, and `graph.divide(left, right)` create elementwise operations with NumPy broadcasting. Operands need the same dtype; `role` may differ. A symbolic dimension broadcasts only against itself or 1. `divide` requires a float dtype.
+- `graph.scale(value, factor)` multiplies a float tensor by a constant.
+- `graph.transpose(value, axes=None)` permutes dimensions; the default reverses them.
+- `graph.softmax(value)` normalizes the last axis of a float tensor.
+- `graph.layer_norm(value, gamma, beta, eps=1e-5)` normalizes the last axis; `gamma` and `beta` have the shape of that axis.
 - `graph.relu(value)` creates ReLU.
 - `graph.reshape(value, shape)` changes tensor shape. The element count must be provably equal, including symbolic dimensions.
 - `graph.matmul(left, right)` creates rank-2 matrix multiplication.
 - `graph.output(value)` marks the graph output.
-- `graph.memory_plan(dims=None)` returns liveness, buffer assignment, and peak-memory data. `peak_memory_bytes` includes `bookkeeping_bytes`, the per-call executor allowance `BOOKKEEPING_BASE_BYTES + BOOKKEEPING_INPUT_BYTES × inputs + BOOKKEEPING_NODE_BYTES × nodes`. The constants come from `BOOKKEEPING_BY_VERSION` for the running CPython version, or the largest calibrated values for other versions. Elementwise operations reuse a graph-owned buffer whose values die at that step; `reshape` shares its input's buffer; caller inputs are never reused. `peak_memory_bytes` is `None` while symbolic dimensions are unbound; `dims` binds them.
+- `graph.memory_plan(dims=None)` returns liveness, buffer assignment, and peak-memory data. `peak_memory_bytes` includes `bookkeeping_bytes`, the per-call executor allowance `BOOKKEEPING_BASE_BYTES + BOOKKEEPING_INPUT_BYTES × inputs + BOOKKEEPING_NODE_BYTES × nodes`. The constants come from `BOOKKEEPING_BY_VERSION` for the running CPython version, or the largest calibrated values for other versions. Elementwise and row operations reuse a contiguous graph-owned buffer of the output shape whose values die at that step; `reshape` of a contiguous value and `transpose` share their input's buffer; caller inputs are never reused. Each elementwise and row operation reserves one NumPy ufunc buffer of up to 8192 elements per operand, and `softmax` and `layer_norm` reserve two row-sized vectors. `peak_memory_bytes` is `None` while symbolic dimensions are unbound; `dims` binds them.
 - `graph.analyze(dims=None)` returns an `Analysis` with the memory plan and claims. It reports and does not raise.
 - `graph.validate(dims=None)` checks graph completeness and resource contracts. A memory limit that cannot be verified because of unbound symbolic dimensions raises `ContractViolation`.
 - `graph.execute(values, backend="python", digests=False)` returns `(output, ExecutionRecord)`. Symbolic dimensions are bound from input sizes before the resource contract is checked. The executor follows the memory plan and releases each value after its last use. The plan, step list, and graph digest are cached per graph state, resource contract, and dimension binding. `digests=True` adds content digests of the inputs and output.

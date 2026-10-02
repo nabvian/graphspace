@@ -11,20 +11,44 @@ from graphspace import Graph, TensorSpec, __version__
 from graphspace.core import BOOKKEEPING_BASE_BYTES, BOOKKEEPING_INPUT_BYTES, BOOKKEEPING_NODE_BYTES
 
 
+OPERATIONS = [
+    "add", "multiply", "subtract", "divide", "relu", "reshape", "matmul",
+    "scale", "transpose", "softmax", "layer_norm", "bias",
+]
+
+
 def random_graph(rng, index):
     n = rng.choice([4, 16, 64, 128])
     graph = Graph(f"calibration_{index}")
     values = [graph.input(f"in{i}", TensorSpec((n, n))) for i in range(rng.randint(1, 4))]
+    vectors = []
+
+    def vector():
+        if not vectors or rng.random() < 0.3:
+            vectors.append(graph.input(f"vec{len(vectors)}", TensorSpec((n,))))
+        return rng.choice(vectors)
+
     for _ in range(rng.randint(1, 16)):
-        operation = rng.choice(["add", "multiply", "subtract", "relu", "reshape", "matmul"])
-        if operation == "relu":
-            values.append(graph.relu(rng.choice(values)))
+        operation = rng.choice(OPERATIONS)
+        value = rng.choice(values)
+        if operation in ("relu", "softmax", "transpose"):
+            values.append(getattr(graph, operation)(value))
         elif operation == "reshape":
-            values.append(graph.reshape(rng.choice(values), (n, n)))
+            values.append(graph.reshape(value, (n, n)))
+        elif operation == "scale":
+            values.append(graph.scale(value, rng.uniform(0.5, 2.0)))
+        elif operation == "layer_norm":
+            values.append(graph.layer_norm(value, vector(), vector()))
+        elif operation == "bias":
+            values.append(graph.add(value, vector()))
         else:
-            values.append(getattr(graph, operation)(rng.choice(values), rng.choice(values)))
+            values.append(getattr(graph, operation)(value, rng.choice(values)))
     graph.output(values[-1])
     return graph, n
+
+
+def inputs_for(graph, n):
+    return {name: np.full(spec.shape, 1.0 / n, dtype=np.float32) for name, spec in graph.inputs.items()}
 
 
 def tensor_estimate(graph):
@@ -50,11 +74,11 @@ def main(argv=None):
 
     rng = random.Random(args.seed)
     warmup, n = random_graph(random.Random(0), -1)
-    warmup.execute({name: np.full((n, n), 1.0 / n, dtype=np.float32) for name in warmup.inputs}, backend="numpy")
+    warmup.execute(inputs_for(warmup, n), backend="numpy")
     samples = []
     for index in range(args.graphs):
         graph, n = random_graph(rng, index)
-        arrays = {name: np.full((n, n), 1.0 / n, dtype=np.float32) for name in graph.inputs}
+        arrays = inputs_for(graph, n)
         inputs = sum(array.nbytes for array in arrays.values())
         cold = measure(graph, arrays) + inputs - tensor_estimate(graph)
         warm = measure(graph, arrays) + inputs - tensor_estimate(graph)

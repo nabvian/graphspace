@@ -82,17 +82,40 @@ class NumpyBackend:
     def _apply(self, node: Node, args: list, out_shape: tuple[int, ...], out: Any):
         np = self.np
         if node.operation == "add":
-            return np.add(*args, out=out)
+            return np.add(*args, out=out, order="C")
         if node.operation == "multiply":
-            return np.multiply(*args, out=out)
+            return np.multiply(*args, out=out, order="C")
         if node.operation == "subtract":
-            return np.subtract(*args, out=out)
+            return np.subtract(*args, out=out, order="C")
+        if node.operation == "divide":
+            return np.divide(*args, out=out, order="C")
         if node.operation == "relu":
-            return np.maximum(args[0], args[0].dtype.type(0), out=out)
+            return np.maximum(args[0], args[0].dtype.type(0), out=out, order="C")
+        if node.operation == "scale":
+            return np.multiply(args[0], args[0].dtype.type(node.attribute("factor")), out=out, order="C")
         if node.operation == "reshape":
             return args[0].reshape(out_shape)
+        if node.operation == "transpose":
+            return args[0].transpose(node.attribute("axes"))
         if node.operation == "matmul":
             return np.matmul(*args, out=out)
+        if node.operation == "softmax":
+            values = args[0]
+            result = np.subtract(values, values.max(axis=-1, keepdims=True, initial=-np.inf), out=out, order="C")
+            np.exp(result, out=result)
+            return np.divide(result, result.sum(axis=-1, keepdims=True), out=result)
+        if node.operation == "layer_norm":
+            values, gamma, beta = args
+            width = values.shape[-1]
+            result = np.subtract(values, values.mean(axis=-1, keepdims=True), out=out, order="C")
+            rows = result.reshape(-1, width)
+            variance = np.einsum("ij,ij->i", rows, rows).reshape(result.shape[:-1] + (1,))
+            np.divide(variance, width, out=variance)
+            np.add(variance, node.attribute("eps"), out=variance)
+            np.sqrt(variance, out=variance)
+            np.divide(result, variance, out=result)
+            np.multiply(result, gamma, out=result)
+            return np.add(result, beta, out=result)
         raise ContractViolation(f"{node.name}: unsupported operation {node.operation}", node=node.name, actual=node.operation)
 
     def digest(self, values: Mapping[str, tuple[str, Any]]) -> str:

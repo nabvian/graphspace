@@ -3,10 +3,10 @@
 ## Stable for 0.1
 
 - `Graph(name, resources=None)` and `Graph.resources`, `inputs`, `nodes`
-- `Graph.input`, `output`, `add`, `multiply`, `subtract`, `relu`, `reshape`, `matmul`, `validate`, `analyze`, `memory_plan`, and `execute(values, backend="python", digests=False)`
+- `Graph.input`, `output`, `add`, `multiply`, `subtract`, `divide`, `scale`, `relu`, `reshape`, `transpose`, `matmul`, `softmax`, `layer_norm`, `validate`, `analyze`, `memory_plan`, and `execute(values, backend="python", digests=False)`
 - `TensorSpec(shape, dtype, layout, role)`, `nbytes`, `nbytes_with`, `concrete_shape`, and `symbols`
 - `ResourceContract(max_memory_bytes, deterministic)` and `ResourceContract.max_memory`
-- Reading `ExecutionRecord`, `Analysis`, `MemoryPlan`, `MemoryValue`, `Node`, and `Claim` fields; `claim(name)` and `to_dict()`
+- Reading `ExecutionRecord`, `Analysis`, `MemoryPlan`, `MemoryValue`, `Node`, and `Claim` fields; `claim(name)`, `Node.attribute(name)`, and `to_dict()`
 - `Uncertain` and `require_confidence`
 - `GraphspaceError` and its subclasses, with `code`, `message`, `graph`, `node`, `expected`, `actual`, `remediation`, and `to_dict()`
 - `__version__`

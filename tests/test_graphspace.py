@@ -5,12 +5,16 @@ from graphspace import Graph, ResourceContract, TensorSpec, Uncertain
 from graphspace.failures import (
     ContractViolation, DTypeMismatch, ResourceLimitExceeded, ShapeMismatch, UnknownValue,
 )
-from graphspace.core import BOOKKEEPING_BASE_BYTES, BOOKKEEPING_INPUT_BYTES, BOOKKEEPING_NODE_BYTES
+from graphspace.core import BOOKKEEPING_BASE_BYTES, BOOKKEEPING_INPUT_BYTES, BOOKKEEPING_NODE_BYTES, UFUNC_BUFFER_ELEMENTS
 from graphspace.integrations import numpy as numpy_adapter, torch as torch_adapter
 
 
 def bookkeeping(inputs, nodes):
     return BOOKKEEPING_BASE_BYTES + BOOKKEEPING_INPUT_BYTES * inputs + BOOKKEEPING_NODE_BYTES * nodes
+
+
+def ufunc_buffers(operands, elements, itemsize=4):
+    return operands * min(elements, UFUNC_BUFFER_ELEMENTS) * itemsize
 
 
 def add_graph(spec=TensorSpec((2, 2)), resources=None):
@@ -26,7 +30,7 @@ class TestGraphspace(unittest.TestCase):
     def test_graph_executes_and_records_memory(self):
         result, record = add_graph().execute({"a": [1.0] * 4, "b": [2.0] * 4})
         self.assertEqual(result, [3.0] * 4)
-        self.assertEqual(record.peak_memory_bytes, 48 + bookkeeping(2, 1))
+        self.assertEqual(record.peak_memory_bytes, 48 + ufunc_buffers(3, 4) + bookkeeping(2, 1))
 
     def test_shape_validation(self):
         graph = Graph("bad")
@@ -173,13 +177,13 @@ class TestSymbolicShapes(unittest.TestCase):
             graph.validate({"N": 1})
 
     def test_symbolic_dims_bound_at_execute(self):
-        graph = add_graph(TensorSpec(("N", 2)), ResourceContract.max_memory(72 + bookkeeping(2, 1)))
+        graph = add_graph(TensorSpec(("N", 2)), ResourceContract.max_memory(72 + ufunc_buffers(3, 6) + bookkeeping(2, 1)))
         result, record = graph.execute({"a": [1] * 6, "b": [2] * 6})
         self.assertEqual(result, [3.0] * 6)
-        self.assertEqual(record.peak_memory_bytes, 3 * 6 * 4 + bookkeeping(2, 1))
+        self.assertEqual(record.peak_memory_bytes, 3 * 6 * 4 + ufunc_buffers(3, 6) + bookkeeping(2, 1))
 
     def test_symbolic_execute_enforces_memory_limit(self):
-        graph = add_graph(TensorSpec(("N", 2)), ResourceContract.max_memory(71 + bookkeeping(2, 1)))
+        graph = add_graph(TensorSpec(("N", 2)), ResourceContract.max_memory(71 + ufunc_buffers(3, 6) + bookkeeping(2, 1)))
         with self.assertRaises(ResourceLimitExceeded):
             graph.execute({"a": [1] * 6, "b": [2] * 6})
 
@@ -222,7 +226,7 @@ class TestMemoryPlan(unittest.TestCase):
         second = graph.relu(first)
         graph.output(graph.relu(second))
         plan = graph.memory_plan()
-        self.assertEqual(plan.peak_memory_bytes - plan.bookkeeping_bytes, 32)
+        self.assertEqual(plan.peak_memory_bytes - plan.bookkeeping_bytes, 32 + ufunc_buffers(2, 4))
         self.assertEqual(plan.bookkeeping_bytes, bookkeeping(1, 3))
         self.assertEqual(plan.reusable_buffers, 2)
         buffers = {value.name: value.buffer for value in plan.values}
@@ -254,7 +258,7 @@ class TestMemoryPlan(unittest.TestCase):
             value = graph.add(value, "y") if step % 2 == 0 else graph.multiply(value, "y")
         graph.output(value)
         plan = graph.memory_plan()
-        self.assertEqual(plan.peak_memory_bytes - plan.bookkeeping_bytes, 3 * 16)
+        self.assertEqual(plan.peak_memory_bytes - plan.bookkeeping_bytes, 3 * 16 + ufunc_buffers(3, 4))
         self.assertEqual(plan.reusable_buffers, 5)
 
 
@@ -289,7 +293,7 @@ class TestPreparedCache(unittest.TestCase):
         _, large = graph.execute({"a": [1.0] * 8, "b": [1.0] * 8})
         _, small_again = graph.execute({"a": [1.0] * 2, "b": [1.0] * 2})
         self.assertEqual(small.peak_memory_bytes, small_again.peak_memory_bytes)
-        self.assertEqual(large.peak_memory_bytes - small.peak_memory_bytes, 3 * 6 * 4)
+        self.assertEqual(large.peak_memory_bytes - small.peak_memory_bytes, 3 * 6 * 4 + ufunc_buffers(3, 6))
 
 
 class TestProvenance(unittest.TestCase):

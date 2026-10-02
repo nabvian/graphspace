@@ -19,16 +19,19 @@ DTYPE_BYTES = {"float32": 4, "float16": 2, "int32": 4, "int64": 8}
 LAYOUTS = frozenset({"row_major"})
 FLOAT_DTYPES = frozenset({"float32", "float16"})
 INT_RANGES = {"int32": (-(2**31), 2**31 - 1), "int64": (-(2**63), 2**63 - 1)}
-ELEMENTWISE = frozenset({"add", "multiply", "subtract", "relu"})
+IN_PLACE = frozenset({"add", "multiply", "subtract", "divide", "relu", "scale", "softmax", "layer_norm"})
+ROW_SCRATCH = frozenset({"softmax", "layer_norm"})
+UNBUFFERED = frozenset({"reshape", "transpose", "matmul"})
+UFUNC_BUFFER_ELEMENTS = 8192
 
 Dims = Mapping[str, int]
 PREPARED_CACHE_SIZE = 8
 BOOKKEEPING_BY_VERSION = {
-    (3, 10): (10752, 808, 976),
-    (3, 11): (12352, 784, 936),
-    (3, 12): (7936, 280, 648),
-    (3, 13): (8064, 288, 664),
-    (3, 14): (6656, 280, 384),
+    (3, 10): (12992, 3208, 424),
+    (3, 11): (14208, 3160, 312),
+    (3, 12): (7744, 2728, 96),
+    (3, 13): (7552, 2720, 112),
+    (3, 14): (6080, 2664, 0),
 }
 BOOKKEEPING_BASE_BYTES, BOOKKEEPING_INPUT_BYTES, BOOKKEEPING_NODE_BYTES = BOOKKEEPING_BY_VERSION.get(
     sys.version_info[:2], tuple(max(column) for column in zip(*BOOKKEEPING_BY_VERSION.values())),
@@ -111,6 +114,10 @@ class Node:
     inputs: tuple[str, ...]
     output: str
     output_spec: TensorSpec
+    attributes: tuple[tuple[str, Any], ...] = ()
+
+    def attribute(self, name: str) -> Any:
+        return dict(self.attributes)[name]
 
 
 @dataclass(frozen=True)
@@ -227,6 +234,64 @@ class Graph:
     def subtract(self, left: str, right: str, *, name: str = "subtract") -> str:
         return self._elementwise("subtract", left, right, name)
 
+    def divide(self, left: str, right: str, *, name: str = "divide") -> str:
+        self._require_float(left, name)
+        return self._elementwise("divide", left, right, name)
+
+    def scale(self, value: str, factor: float, *, name: str = "scale") -> str:
+        source = self._require_float(value, name)
+        if isinstance(factor, bool) or not isinstance(factor, (int, float)):
+            raise ContractViolation(
+                f"{name}: factor must be a number", graph=self.name, node=name, expected="number", actual=type(factor).__name__,
+            )
+        output = self._unique_output(name)
+        self._nodes.append(Node(name, "scale", (value,), output, TensorSpec(source.shape, source.dtype), (("factor", float(factor)),)))
+        return output
+
+    def transpose(self, value: str, axes: tuple[int, ...] | None = None, *, name: str = "transpose") -> str:
+        source = self._spec(value)
+        rank = len(source.shape)
+        axes = tuple(reversed(range(rank))) if axes is None else tuple(axes)
+        if sorted(axes) != list(range(rank)) or any(isinstance(axis, bool) for axis in axes):
+            raise ShapeMismatch(
+                f"{name}: axes {axes} are not a permutation of {rank} dimensions",
+                graph=self.name, node=name, expected=list(range(rank)), actual=list(axes),
+            )
+        output = self._unique_output(name)
+        shape = tuple(source.shape[axis] for axis in axes)
+        self._nodes.append(Node(name, "transpose", (value,), output, TensorSpec(shape, source.dtype), (("axes", axes),)))
+        return output
+
+    def softmax(self, value: str, *, name: str = "softmax") -> str:
+        source = self._require_float(value, name)
+        self._require_rank(source, name)
+        output = self._unique_output(name)
+        self._nodes.append(Node(name, "softmax", (value,), output, TensorSpec(source.shape, source.dtype)))
+        return output
+
+    def layer_norm(self, value: str, gamma: str, beta: str, *, eps: float = 1e-5, name: str = "layer_norm") -> str:
+        source = self._require_float(value, name)
+        self._require_rank(source, name)
+        for parameter in (gamma, beta):
+            spec = self._spec(parameter)
+            if spec.shape != source.shape[-1:]:
+                raise ShapeMismatch(
+                    f"{name}: {parameter} must have shape {source.shape[-1:]}",
+                    graph=self.name, node=name, expected=source.shape[-1:], actual=spec.shape,
+                )
+            if spec.dtype != source.dtype:
+                raise DTypeMismatch(
+                    f"{name}: {parameter} must have dtype {source.dtype}",
+                    graph=self.name, node=name, expected=source.dtype, actual=spec.dtype,
+                )
+        if isinstance(eps, bool) or not isinstance(eps, (int, float)) or not eps > 0:
+            raise ContractViolation(f"{name}: eps must be positive", graph=self.name, node=name, expected="> 0", actual=eps)
+        output = self._unique_output(name)
+        self._nodes.append(Node(
+            name, "layer_norm", (value, gamma, beta), output, TensorSpec(source.shape, source.dtype), (("eps", float(eps)),),
+        ))
+        return output
+
     def relu(self, value: str, *, name: str = "relu") -> str:
         source = self._spec(value)
         output = self._unique_output(name)
@@ -317,30 +382,42 @@ class Graph:
 
         buffer = {name: name for name in self._inputs}
         members: dict[str, list[str]] = {name: [name] for name in self._inputs}
+        contiguous = {name: True for name in self._inputs}
         owned: set[str] = set()
+        scratch = [0] * (steps + 1)
         for index, node in enumerate(self._nodes, start=1):
             target = None
-            if node.operation == "reshape":
-                target = buffer[node.inputs[0]]
-            elif node.operation in ELEMENTWISE:
-                for name in node.inputs:
-                    candidate = buffer[name]
-                    if candidate in owned and max(last_use[member] for member in members[candidate]) == index:
-                        target = candidate
-                        break
+            source = node.inputs[0]
+            if node.operation == "transpose":
+                target = buffer[source]
+                contiguous[node.output] = node.attribute("axes") == tuple(range(len(node.output_spec.shape)))
+            elif node.operation == "reshape" and contiguous[source]:
+                target = buffer[source]
+                contiguous[node.output] = True
+            else:
+                contiguous[node.output] = True
+                if node.operation in IN_PLACE:
+                    for name in node.inputs:
+                        candidate = buffer[name]
+                        if (candidate in owned and contiguous[name]
+                                and self._spec(name).shape == node.output_spec.shape
+                                and max(last_use[member] for member in members[candidate]) == index):
+                            target = candidate
+                            break
             if target is None:
                 target = node.output
                 members[target] = []
                 owned.add(target)
             buffer[node.output] = target
             members[target].append(node.output)
+            scratch[index] = self._scratch_bytes(node, dims)
 
         reports = tuple(
             MemoryValue(name, self._spec(name).nbytes_with(dims), first_use[name], last_use[name], buffer[name])
             for name in first_use
         )
         sizes = {name: self._spec(name).nbytes_with(dims) for name in members}
-        if any(size is None for size in sizes.values()):
+        if any(size is None for size in sizes.values()) or None in scratch:
             peak = None
         else:
             spans = {
@@ -348,7 +425,7 @@ class Graph:
                 for name, group in members.items()
             }
             peak = max(
-                (sum(sizes[name] for name, (first, last) in spans.items() if first <= step <= last)
+                (sum(sizes[name] for name, (first, last) in spans.items() if first <= step <= last) + scratch[step]
                  for step in range(steps + 1)),
                 default=0,
             )
@@ -435,7 +512,7 @@ class Graph:
         steps = []
         for index, node in enumerate(self._nodes, start=1):
             out_source = None
-            if node.operation != "reshape" and buffer[node.output] != node.output:
+            if node.operation not in ("reshape", "transpose") and buffer[node.output] != node.output:
                 out_source = next(name for name in node.inputs if buffer[name] == buffer[node.output])
             release = tuple(
                 name for name in dict.fromkeys((*node.inputs, node.output))
@@ -475,9 +552,10 @@ class Graph:
 
     def _elementwise(self, operation: str, left: str, right: str, name: str) -> str:
         spec_left, spec_right = self._spec(left), self._spec(right)
-        if spec_left.shape != spec_right.shape:
+        shape = _broadcast(spec_left.shape, spec_right.shape)
+        if shape is None:
             raise ShapeMismatch(
-                f"{name}: {operation} requires identical shapes: {spec_left.shape} != {spec_right.shape}",
+                f"{name}: cannot broadcast {spec_left.shape} with {spec_right.shape}",
                 graph=self.name, node=name, expected=spec_left.shape, actual=spec_right.shape,
             )
         if spec_left.dtype != spec_right.dtype:
@@ -491,8 +569,31 @@ class Graph:
                 graph=self.name, node=name, expected=spec_left.layout, actual=spec_right.layout,
             )
         output = self._unique_output(name)
-        self._nodes.append(Node(name, operation, (left, right), output, TensorSpec(spec_left.shape, spec_left.dtype, spec_left.layout)))
+        self._nodes.append(Node(name, operation, (left, right), output, TensorSpec(shape, spec_left.dtype, spec_left.layout)))
         return output
+
+    def _scratch_bytes(self, node: Node, dims: Dims | None) -> int | None:
+        shape = node.output_spec.concrete_shape(dims)
+        if shape is None:
+            return None
+        if node.operation in UNBUFFERED:
+            return 0
+        itemsize = DTYPE_BYTES[node.output_spec.dtype]
+        rows = 2 * _product(shape[:-1]) * itemsize if node.operation in ROW_SCRATCH else 0
+        return rows + (len(node.inputs) + 1) * min(_product(shape), UFUNC_BUFFER_ELEMENTS) * itemsize
+
+    def _require_float(self, value: str, name: str) -> TensorSpec:
+        spec = self._spec(value)
+        if spec.dtype not in FLOAT_DTYPES:
+            raise DTypeMismatch(
+                f"{name}: requires a float dtype, got {spec.dtype}",
+                graph=self.name, node=name, expected=sorted(FLOAT_DTYPES), actual=spec.dtype,
+            )
+        return spec
+
+    def _require_rank(self, spec: TensorSpec, name: str) -> None:
+        if not spec.shape:
+            raise ShapeMismatch(f"{name}: requires rank 1 or higher", graph=self.name, node=name, expected=">= 1", actual=0)
 
     def _infer_dims(self, lengths: Mapping[str, int]) -> dict[str, int]:
         dims: dict[str, int] = {}
@@ -535,7 +636,11 @@ class Graph:
             "name": self.name,
             "resources": [self.resources.max_memory_bytes, self.resources.deterministic],
             "inputs": [[name, list(spec.shape), spec.dtype, spec.layout, spec.role] for name, spec in self._inputs.items()],
-            "nodes": [[node.name, node.operation, list(node.inputs), node.output, list(node.output_spec.shape), node.output_spec.dtype] for node in self._nodes],
+            "nodes": [
+                [node.name, node.operation, list(node.inputs), node.output, list(node.output_spec.shape),
+                 node.output_spec.dtype, [[key, list(value) if isinstance(value, tuple) else value] for key, value in node.attributes]]
+                for node in self._nodes
+            ],
             "output": self._output,
         }
 
@@ -562,6 +667,21 @@ def _product(values) -> int:
     for value in values:
         result *= value
     return result
+
+
+def _broadcast(left: tuple[Any, ...], right: tuple[Any, ...]) -> tuple[Any, ...] | None:
+    rank = max(len(left), len(right))
+    left = (1,) * (rank - len(left)) + tuple(left)
+    right = (1,) * (rank - len(right)) + tuple(right)
+    shape = []
+    for a, b in zip(left, right):
+        if a == b or b == 1:
+            shape.append(a)
+        elif a == 1:
+            shape.append(b)
+        else:
+            return None
+    return tuple(shape)
 
 
 def _element_count(shape: tuple[Any, ...]) -> tuple[int, tuple[str, ...]]:

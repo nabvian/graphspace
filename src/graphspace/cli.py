@@ -2,7 +2,7 @@ from .core import Graph, ResourceContract, TensorSpec
 
 
 def demo() -> int:
-    graph = Graph("demo_add", ResourceContract.max_memory(16384, deterministic=True))
+    graph = Graph("demo_add", ResourceContract.max_memory(65536, deterministic=True))
     spec = TensorSpec((2, 4), "float32")
     graph.input("a", spec)
     graph.input("b", spec)

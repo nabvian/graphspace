@@ -58,7 +58,7 @@ Repeats the benchmark in independent processes and judges the thresholds across 
 
 - The `python` backend computes float dtypes in Python `float` precision. The `numpy` backend computes in the declared dtype.
 - Float overflow, division by zero, and invalid operations follow IEEE rules without warnings on both backends.
-- `peak_memory_bytes` is estimated from declared dtypes, value liveness, buffer reuse, and a per-call bookkeeping allowance calibrated for each CPython version from 3.10 to 3.14. On held-out graphs the allowance covered 300 of 300 on 3.11–3.14 and 299 of 300 on 3.10, where one first call exceeded it by 448 bytes. It does not cover the one-time cost of loading a backend, inputs converted from another dtype, or the widened temporaries used to check integer overflow.
+- `peak_memory_bytes` is estimated from declared dtypes, value liveness, buffer reuse, and a per-call bookkeeping allowance calibrated for each CPython version from 3.10 to 3.14. On held-out graphs every later call stayed within the estimate; 296 to 298 of 300 first calls did, and the rest exceeded it by at most 3.5 KB. It does not cover the one-time cost of loading a backend, inputs converted from another dtype, or the widened temporaries used to check integer overflow.
 - `ExecutionRecord.deterministic` is the declared contract.
 - The PyTorch adapter validates shape and dtype only.
 - Graphs have no conditional routing.

@@ -1,6 +1,6 @@
 from graphspace import Graph, ResourceContract, TensorSpec
 
-graph = Graph("classifier", ResourceContract.max_memory(16384, deterministic=True))
+graph = Graph("classifier", ResourceContract.max_memory(65536, deterministic=True))
 spec = TensorSpec((2, 4), dtype="float32", role="activation")
 graph.input("left", spec)
 graph.input("right", spec)

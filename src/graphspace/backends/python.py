@@ -2,6 +2,7 @@ from collections.abc import Mapping, Sequence
 from contextlib import nullcontext
 from typing import Any
 import array
+import math
 import platform
 import sys
 
@@ -55,27 +56,41 @@ class PythonBackend:
     def run(
         self, node: Node, args: list[list], in_shapes: list[tuple[int, ...]], out_shape: tuple[int, ...], out: Any = None,
     ) -> list:
-        result = self._apply(node, args, in_shapes)
+        result = self._apply(node, args, in_shapes, out_shape)
         check_range(node.output, result, node.output_spec.dtype)
         return result
 
-    def _apply(self, node: Node, args: list[list], in_shapes: list[tuple[int, ...]]) -> list:
-        if node.operation == "add":
-            return [a + b for a, b in zip(*args)]
-        if node.operation == "multiply":
-            return [a * b for a, b in zip(*args)]
-        if node.operation == "subtract":
-            return [a - b for a, b in zip(*args)]
-        if node.operation == "relu":
+    def _apply(self, node: Node, args: list[list], in_shapes: list[tuple[int, ...]], out_shape: tuple[int, ...]) -> list:
+        operation = node.operation
+        if operation in BINARY:
+            left, right = args
+            if in_shapes[0] != out_shape:
+                left = [left[index] for index in broadcast_indices(in_shapes[0], out_shape)]
+            if in_shapes[1] != out_shape:
+                right = [right[index] for index in broadcast_indices(in_shapes[1], out_shape)]
+            function = BINARY[operation]
+            return [function(a, b) for a, b in zip(left, right)]
+        if operation == "relu":
             zero = 0.0 if node.output_spec.dtype in FLOAT_DTYPES else 0
             return [zero if value < zero else value for value in args[0]]
-        if node.operation == "reshape":
+        if operation == "scale":
+            factor = node.attribute("factor")
+            return [value * factor for value in args[0]]
+        if operation == "reshape":
             return args[0]
-        if node.operation == "matmul":
+        if operation == "transpose":
+            return [args[0][index] for index in transpose_indices(in_shapes[0], node.attribute("axes"))]
+        if operation == "matmul":
             left, right = args
             (rows, inner), (_, columns) = in_shapes
             return [sum(left[row * inner + k] * right[k * columns + col] for k in range(inner)) for row in range(rows) for col in range(columns)]
-        raise ContractViolation(f"{node.name}: unsupported operation {node.operation}", node=node.name, actual=node.operation)
+        if operation == "softmax":
+            return [value for row in _rows(args[0], out_shape) for value in _softmax(row)]
+        if operation == "layer_norm":
+            values, gamma, beta = args
+            eps = node.attribute("eps")
+            return [value for row in _rows(values, out_shape) for value in _layer_norm(row, gamma, beta, eps)]
+        raise ContractViolation(f"{node.name}: unsupported operation {operation}", node=node.name, actual=operation)
 
     def digest(self, values: Mapping[str, tuple[str, list]]) -> str:
         entries = []
@@ -85,6 +100,70 @@ class PythonBackend:
                 packed.byteswap()
             entries.append((name, dtype, len(data), packed.tobytes()))
         return frame_digest(entries)
+
+
+def _divide(a: float, b: float) -> float:
+    if b != 0:
+        return a / b
+    if a != a or a == 0:
+        return math.nan
+    return math.copysign(math.inf, a) * math.copysign(1.0, b)
+
+
+BINARY = {
+    "add": lambda a, b: a + b,
+    "subtract": lambda a, b: a - b,
+    "multiply": lambda a, b: a * b,
+    "divide": _divide,
+}
+
+
+def _strides(shape: tuple[int, ...]) -> list[int]:
+    strides = [1] * len(shape)
+    for axis in range(len(shape) - 2, -1, -1):
+        strides[axis] = strides[axis + 1] * shape[axis + 1]
+    return strides
+
+
+def _expand(sizes: tuple[int, ...], strides: list[int]) -> list[int]:
+    indices = [0]
+    for size, stride in zip(sizes, strides):
+        indices = [base + step * stride for base in indices for step in range(size)]
+    return indices
+
+
+def broadcast_indices(in_shape: tuple[int, ...], out_shape: tuple[int, ...]) -> list[int]:
+    padded = (1,) * (len(out_shape) - len(in_shape)) + tuple(in_shape)
+    strides = [0 if size == 1 else stride for size, stride in zip(padded, _strides(padded))]
+    return _expand(out_shape, strides)
+
+
+def transpose_indices(in_shape: tuple[int, ...], axes: tuple[int, ...]) -> list[int]:
+    strides = _strides(in_shape)
+    return _expand(tuple(in_shape[axis] for axis in axes), [strides[axis] for axis in axes])
+
+
+def _rows(values: list, shape: tuple[int, ...]):
+    width = shape[-1]
+    for start in range(0, len(values), width or 1):
+        yield values[start:start + width]
+
+
+def _softmax(row: list) -> list:
+    if any(value != value for value in row):
+        return [math.nan] * len(row)
+    peak = max(row, default=0.0)
+    exponents = [math.exp(value - peak) if value - peak == value - peak else math.nan for value in row]
+    total = sum(exponents)
+    return [_divide(value, total) for value in exponents]
+
+
+def _layer_norm(row: list, gamma: list, beta: list, eps: float) -> list:
+    width = len(row)
+    mean = sum(row) / width if width else math.nan
+    centered = [value - mean for value in row]
+    deviation = math.sqrt(sum(value * value for value in centered) / width + eps) if width else math.nan
+    return [value / deviation * g + b for value, g, b in zip(centered, gamma, beta)]
 
 
 def check_range(name: str, values: list, dtype: str) -> None:

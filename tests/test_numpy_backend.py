@@ -163,7 +163,7 @@ class TestNumpyBackend(unittest.TestCase):
 
     def test_symbolic_dims_from_array_size(self):
         graph = binary_graph("add", TensorSpec(("N", 2)))
-        graph.resources = ResourceContract.max_memory(71 + graph.memory_plan().bookkeeping_bytes)
+        graph.resources = ResourceContract.max_memory(graph.memory_plan({"N": 3}).peak_memory_bytes - 1)
         result, _ = graph.execute({"a": np.ones((2, 2)), "b": np.ones(4)}, backend="numpy")
         self.assertEqual(result.shape, (2, 2))
         with self.assertRaises(ResourceLimitExceeded):

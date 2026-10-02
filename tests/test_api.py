@@ -27,6 +27,11 @@ class TestPublicSurface(unittest.TestCase):
             Graph.validate: "(self, dims: 'Dims | None' = None) -> 'None'",
             Graph.analyze: "(self, dims: 'Dims | None' = None) -> 'Analysis'",
             Graph.memory_plan: "(self, dims: 'Dims | None' = None) -> 'MemoryPlan'",
+            Graph.divide: "(self, left: 'str', right: 'str', *, name: 'str' = 'divide') -> 'str'",
+            Graph.scale: "(self, value: 'str', factor: 'float', *, name: 'str' = 'scale') -> 'str'",
+            Graph.transpose: "(self, value: 'str', axes: 'tuple[int, ...] | None' = None, *, name: 'str' = 'transpose') -> 'str'",
+            Graph.softmax: "(self, value: 'str', *, name: 'str' = 'softmax') -> 'str'",
+            Graph.layer_norm: "(self, value: 'str', gamma: 'str', beta: 'str', *, eps: 'float' = 1e-05, name: 'str' = 'layer_norm') -> 'str'",
         }
         for function, expected in signatures.items():
             self.assertEqual(str(inspect.signature(function)), expected, function.__qualname__)

@@ -5,11 +5,15 @@ from graphspace import (
     Basis, BackendUnavailable, ContractViolation, DTypeMismatch, Graph, LowConfidence,
     ResourceContract, ResourceLimitExceeded, ShapeMismatch, TensorSpec, Uncertain, UnknownValue,
 )
-from graphspace.core import BOOKKEEPING_BASE_BYTES, BOOKKEEPING_INPUT_BYTES, BOOKKEEPING_NODE_BYTES
+from graphspace.core import BOOKKEEPING_BASE_BYTES, BOOKKEEPING_INPUT_BYTES, BOOKKEEPING_NODE_BYTES, UFUNC_BUFFER_ELEMENTS
 
 
 def bookkeeping(inputs, nodes):
     return BOOKKEEPING_BASE_BYTES + BOOKKEEPING_INPUT_BYTES * inputs + BOOKKEEPING_NODE_BYTES * nodes
+
+
+def buffers(operands, elements, itemsize=4):
+    return operands * min(elements, UFUNC_BUFFER_ELEMENTS) * itemsize
 
 
 def add_graph(spec=TensorSpec((2, 2)), resources=None):
@@ -23,11 +27,11 @@ def add_graph(spec=TensorSpec((2, 2)), resources=None):
 class TestAnalysis(unittest.TestCase):
 
     def test_claims_carry_basis(self):
-        analysis = add_graph(resources=ResourceContract.max_memory(48 + bookkeeping(2, 1), deterministic=True)).analyze()
+        analysis = add_graph(resources=ResourceContract.max_memory(48 + buffers(3, 4) + bookkeeping(2, 1), deterministic=True)).analyze()
         self.assertEqual(analysis.claim("shapes_consistent").basis, Basis.PROVEN)
         self.assertEqual(analysis.claim("output_spec").value, TensorSpec((2, 2)))
         self.assertEqual(analysis.claim("output_spec").basis, Basis.PROVEN)
-        self.assertEqual(analysis.claim("peak_memory_bytes").value, 48 + bookkeeping(2, 1))
+        self.assertEqual(analysis.claim("peak_memory_bytes").value, 48 + buffers(3, 4) + bookkeeping(2, 1))
         self.assertEqual(analysis.claim("bookkeeping_bytes").value, bookkeeping(2, 1))
         self.assertEqual(analysis.claim("bookkeeping_bytes").basis, Basis.ESTIMATED)
         self.assertEqual(analysis.claim("peak_memory_bytes").basis, Basis.ESTIMATED)
@@ -47,7 +51,7 @@ class TestAnalysis(unittest.TestCase):
         self.assertIsNone(analysis.claim("within_memory_limit").value)
         bound = add_graph(TensorSpec(("N", 2))).analyze({"N": 3})
         self.assertEqual(bound.claim("dimensions").basis, Basis.DECLARED)
-        self.assertEqual(bound.claim("peak_memory_bytes").value, 72 + bookkeeping(2, 1))
+        self.assertEqual(bound.claim("peak_memory_bytes").value, 72 + buffers(3, 6) + bookkeeping(2, 1))
 
     def test_unknown_claim_raises_key_error(self):
         with self.assertRaises(KeyError):
@@ -115,7 +119,7 @@ class TestStructuredFailures(unittest.TestCase):
         with self.assertRaises(ResourceLimitExceeded) as context:
             graph.validate()
         error = context.exception
-        self.assertEqual((error.expected, error.actual), (10, 48 + bookkeeping(2, 1)))
+        self.assertEqual((error.expected, error.actual), (10, 48 + buffers(3, 4) + bookkeeping(2, 1)))
         self.assertTrue(error.remediation)
 
     def test_missing_input_remediation(self):

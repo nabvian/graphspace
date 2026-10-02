@@ -6,7 +6,7 @@ Graphspace is an analysis and execution library. It must not be treated as a san
 
 ## Reporting
 
-Do not publish suspected security vulnerabilities in public issues. Report them privately to the project maintainers with:
+Do not publish suspected security vulnerabilities in public issues. Report them through GitHub private vulnerability reporting: open the Security tab of https://github.com/nabvian/graphspace and choose "Report a vulnerability". Include:
 
 - affected version;
 - reproduction steps;

@@ -35,6 +35,12 @@ class NumpyBackend:
         shape = spec.concrete_shape(dims)
         if not isinstance(data, np.ndarray):
             return np.array(self._python.coerce(name, data, spec, dims), dtype=spec.dtype).reshape(shape)
+        if isinstance(data, np.ma.MaskedArray):
+            raise DTypeMismatch(
+                f"input {name} is a masked array",
+                node=name, expected="ndarray", actual="MaskedArray", remediation="pass data.filled(value) or data.compressed()",
+            )
+        data = np.asarray(data)
         if data.size != _product(shape):
             raise ShapeMismatch(
                 f"input {name} has {data.size} elements, shape {spec.shape} needs {_product(shape)}",
@@ -53,7 +59,7 @@ class NumpyBackend:
             if int(data.min()) < low or int(data.max()) > high:
                 raise DTypeMismatch(
                     f"input {name}: value outside {spec.dtype} range",
-                    node=name, expected=[low, high], actual=[int(data.min()), int(data.max())],
+                    node=name, expected=[low, high], actual=f"{int(((data < low) | (data > high)).sum())} values out of range",
                 )
         array = data if data.dtype == spec.dtype else data.astype(spec.dtype)
         return array.reshape(shape)
@@ -68,7 +74,7 @@ class NumpyBackend:
             if result.size and (result.min() < low or result.max() > high):
                 raise DTypeMismatch(
                     f"{node.output}: value outside {dtype} range",
-                    node=node.output, expected=[low, high], actual=[int(result.min()), int(result.max())],
+                    node=node.output, expected=[low, high], actual=f"{int(((result < low) | (result > high)).sum())} values out of range",
                 )
             return result.astype(dtype)
         return self._apply(node, args, out_shape, out)

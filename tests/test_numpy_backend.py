@@ -134,6 +134,26 @@ class TestNumpyBackend(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(error):
                 graph.execute({"a": value, "b": ok}, backend="numpy")
 
+    def test_masked_arrays_rejected(self):
+        graph = binary_graph("add", TensorSpec((4,)))
+        masked = np.ma.masked_array(np.ones(4, dtype=np.float32), mask=[0, 0, 1, 0])
+        with self.assertRaises(DTypeMismatch) as context:
+            graph.execute({"a": masked, "b": np.ones(4, dtype=np.float32)}, backend="numpy")
+        self.assertEqual(context.exception.actual, "MaskedArray")
+
+    def test_array_subclasses_return_plain_arrays(self):
+        graph = binary_graph("add", TensorSpec((1, 4)))
+        matrix = np.matrix([[1.0, 2.0, 3.0, 4.0]], dtype=np.float32)
+        result, _ = graph.execute({"a": matrix, "b": np.ones((1, 4), dtype=np.float32)}, backend="numpy")
+        self.assertIs(type(result), np.ndarray)
+
+    def test_range_errors_do_not_expose_values(self):
+        graph = binary_graph("add", TensorSpec((3,), "int32"))
+        with self.assertRaises(DTypeMismatch) as context:
+            graph.execute({"a": np.array([5, 2**40, 7]), "b": np.zeros(3, dtype=np.int64)}, backend="numpy")
+        self.assertEqual(context.exception.actual, "1 values out of range")
+        self.assertNotIn(str(2**40), str(context.exception.to_dict()))
+
     def test_int_input_range_checked(self):
         graph = binary_graph("add", TensorSpec((1,), "int32"))
         with self.assertRaises(DTypeMismatch):

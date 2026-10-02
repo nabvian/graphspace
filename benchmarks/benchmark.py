@@ -342,7 +342,7 @@ def evaluate(runs):
 def cpu_model():
     try:
         if sys.platform == "darwin":
-            return subprocess.run(["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True, check=True).stdout.strip()
+            return subprocess.run(["/usr/sbin/sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True, check=True).stdout.strip()
         if sys.platform.startswith("linux"):
             with open("/proc/cpuinfo") as handle:
                 for line in handle:

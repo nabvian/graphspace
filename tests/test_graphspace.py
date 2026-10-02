@@ -113,6 +113,13 @@ class TestInputValidation(unittest.TestCase):
         with self.assertRaises(DTypeMismatch):
             graph.execute({"a": [2**31 - 1], "b": [1]})
 
+    def test_range_errors_do_not_expose_values(self):
+        graph = add_graph(TensorSpec((3,), "int32"))
+        with self.assertRaises(DTypeMismatch) as context:
+            graph.execute({"a": [5, 2**40, 2**41], "b": [0, 0, 0]})
+        self.assertEqual(context.exception.actual, "2 values out of range")
+        self.assertNotIn(str(2**40), str(context.exception.to_dict()))
+
     def test_input_cannot_be_redefined(self):
         graph = Graph("dup")
         graph.input("a", TensorSpec((2, 2)))

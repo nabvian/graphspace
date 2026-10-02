@@ -404,7 +404,6 @@ class Graph:
                 computed[node.output] = impl.run(node, [computed[name] for name in node.inputs], step.in_shapes, step.out_shape, out)
                 for name in step.release:
                     del computed[name]
-        assert self._output is not None
         result = computed[self._output]
         if digests:
             digest_claims.append(Claim("output_sha256", impl.digest(

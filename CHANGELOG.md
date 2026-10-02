@@ -10,6 +10,8 @@
 - Calibrated per-call bookkeeping in the memory estimate, per CPython version
 - NumPy backend follows IEEE float rules without warnings
 - NumPy 1.22 or newer
+- Masked arrays rejected; failures report counts instead of tensor values
+- CI actions pinned to commit SHAs with read-only permissions
 - Per-graph cache of the execution plan and graph digest
 - CPU execution
 - Python and NumPy execution backends

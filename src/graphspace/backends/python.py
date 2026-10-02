@@ -94,7 +94,7 @@ def check_range(name: str, values: list, dtype: str) -> None:
     if values and (min(values) < low or max(values) > high):
         raise DTypeMismatch(
             f"{name}: value outside {dtype} range",
-            node=name, expected=[low, high], actual=[min(values), max(values)],
+            node=name, expected=[low, high], actual=f"{sum(not low <= value <= high for value in values)} values out of range",
         )
 
 

@@ -1,0 +1,34 @@
+# Benchmark Thresholds
+
+Fixed on 2026-10-02, before the first run of the planned-buffer executor.
+
+- Sizes: `full` (256²), `large` (1024²), `xlarge` (2048²). `quick` is a smoke size and is not evaluated.
+- Implementation under test: `graphspace_numpy` with default options (no content digests).
+- Baseline: ordinary NumPy code for the same workload.
+- Measured memory: input storage plus the tracemalloc peak during the call.
+
+| ID | Threshold | Sizes |
+|---|---|---|
+| T1 | Median time ≤ 1.10 × NumPy median, every workload | large, xlarge |
+| T2 | Measured memory ≤ estimated peak, every workload | full, large, xlarge |
+| T3 | `memory_pipeline` measured memory < NumPy measured memory | full, large, xlarge |
+
+A threshold fails if any workload at any listed size fails it.
+
+## Rounds
+
+- Round 1: planned-buffer executor, no input copy, content digests opt-in.
+- Round 2, fixed on 2026-10-02 before its run: per-graph cache of the execution plan and graph digest; estimated peak includes the executor's per-call bookkeeping. Thresholds unchanged. Bookkeeping constants fitted on 300 random graphs (`benchmarks/calibrate.py --seed 1`) and checked on 300 held-out graphs (`--seed 2`), not on the benchmark workloads.
+- Round 3, fixed on 2026-10-02 before its run: replication of round 2 with no change to `src/`. Ten independent processes of `benchmarks/benchmark.py --size full large xlarge`, seeds 0–9, run by `benchmarks/replicate.py`.
+  - T1: for each workload and size, the median ratio across the ten runs must be ≤ 1.10.
+  - T2 and T3: must hold in every run.
+  - The number of single runs passing each threshold is reported but does not decide the round.
+  - One machine only; a second machine was not available.
+
+## Results
+
+| Round | Date | Machine | T1 | T2 | T3 | Report |
+|---|---|---|---|---|---|---|
+| 1 | 2026-10-02 | Apple M5 Pro, CPython 3.14.7, NumPy 2.5.3 | FAIL | FAIL | PASS | `benchmarks/results/2026-10-02-apple-m5-pro.json` |
+| 2 | 2026-10-02 | Apple M5 Pro, CPython 3.14.7, NumPy 2.5.3 | PASS | PASS | PASS | `benchmarks/results/2026-10-02-apple-m5-pro-round2.json` |
+| 3 | 2026-10-02 | Apple M5 Pro, CPython 3.14.7, NumPy 2.5.3, 10 runs | PASS | PASS | PASS | `benchmarks/results/round3-summary.json` |

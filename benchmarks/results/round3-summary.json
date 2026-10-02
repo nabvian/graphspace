@@ -1,0 +1,123 @@
+{
+  "source_sha256": "be8d8ae7cedafd87be494eb3b36efe11392d2a3d9242bb1dff76cedf8237ae46",
+  "runs": 10,
+  "environment": {
+    "timestamp": "2026-10-02T09:47:13.730466+00:00",
+    "os": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
+    "python": "CPython 3.14.7",
+    "cpu": "Apple M5 Pro",
+    "graphspace": "0.1.0",
+    "numpy": "2.5.3",
+    "torch": null,
+    "seed": 0,
+    "repetitions": 20,
+    "warmup": 3,
+    "sizes": [
+      "full",
+      "large",
+      "xlarge"
+    ],
+    "input_generator": "numpy.random.default_rng uniform(-1, 1)",
+    "memory_method": "input storage + tracemalloc peak during the call; torch is not traced"
+  },
+  "verdict": {
+    "T1": {
+      "status": "PASS",
+      "cells": [
+        {
+          "size": "large",
+          "workload": "elementwise_add",
+          "median_ratio": 1.0683623236169983,
+          "min_ratio": 1.0325948546156558,
+          "max_ratio": 1.1775322653246887,
+          "runs_within": 9
+        },
+        {
+          "size": "large",
+          "workload": "matmul",
+          "median_ratio": 1.0076927925654027,
+          "min_ratio": 0.9924715373174011,
+          "max_ratio": 1.0254358069786433,
+          "runs_within": 10
+        },
+        {
+          "size": "large",
+          "workload": "memory_pipeline",
+          "median_ratio": 0.8354871519576508,
+          "min_ratio": 0.8199021306814644,
+          "max_ratio": 0.8610167321677641,
+          "runs_within": 10
+        },
+        {
+          "size": "large",
+          "workload": "mlp",
+          "median_ratio": 1.0118713173062917,
+          "min_ratio": 1.0092520822443367,
+          "max_ratio": 1.0187729607410616,
+          "runs_within": 10
+        },
+        {
+          "size": "large",
+          "workload": "relu_pipeline",
+          "median_ratio": 1.0272983422031214,
+          "min_ratio": 1.0127738788341514,
+          "max_ratio": 1.0724327358345755,
+          "runs_within": 10
+        },
+        {
+          "size": "xlarge",
+          "workload": "elementwise_add",
+          "median_ratio": 1.0353033217546501,
+          "min_ratio": 1.0190636154919754,
+          "max_ratio": 1.0605111292930762,
+          "runs_within": 10
+        },
+        {
+          "size": "xlarge",
+          "workload": "matmul",
+          "median_ratio": 1.0161809283788348,
+          "min_ratio": 1.0008493901366577,
+          "max_ratio": 1.0508143428361423,
+          "runs_within": 10
+        },
+        {
+          "size": "xlarge",
+          "workload": "memory_pipeline",
+          "median_ratio": 0.8459382522880042,
+          "min_ratio": 0.835725002949005,
+          "max_ratio": 0.8578765410531903,
+          "runs_within": 10
+        },
+        {
+          "size": "xlarge",
+          "workload": "mlp",
+          "median_ratio": 1.010443617551529,
+          "min_ratio": 0.9936944701935055,
+          "max_ratio": 1.0182873190256148,
+          "runs_within": 10
+        },
+        {
+          "size": "xlarge",
+          "workload": "relu_pipeline",
+          "median_ratio": 1.0266007969875486,
+          "min_ratio": 1.0151259678182079,
+          "max_ratio": 1.0345109469338347,
+          "runs_within": 10
+        }
+      ]
+    },
+    "T2": {
+      "status": "PASS",
+      "failures": []
+    },
+    "T3": {
+      "status": "PASS",
+      "failures": []
+    },
+    "single_run_passes": {
+      "T1": 9,
+      "T2": 10,
+      "T3": 10
+    }
+  }
+}

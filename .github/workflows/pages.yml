@@ -1,0 +1,41 @@
+name: Publish site
+
+# Rebuilds the GitHub Pages site (site/) from the current package, examples and
+# benchmark results, and publishes it to the gh-pages branch.
+on:
+  push:
+    branches: [main]
+    paths: ["src/**", "benchmarks/results/**", "docs/BENCHMARK_THRESHOLDS.md", "site/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check the playground examples
+        run: |
+          for f in site/examples/*.py; do
+            PYTHONPATH=src:site python -c "import gs_web, sys; r = gs_web.run(open('$f').read()); print('$f', [s['stage'] + ('+' if s['ok'] else '-') for s in r['stages']])"
+          done
+      - name: Build site
+        run: python site/build.py
+      - name: Publish to gh-pages
+        run: |
+          cd _site
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Publish site from ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" gh-pages

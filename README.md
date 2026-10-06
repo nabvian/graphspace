@@ -2,6 +2,8 @@
 
 Executable Python prototype for typed computational graphs, tensor specifications, resource contracts, memory planning, provenance, uncertainty, and structured failures.
 
+**[Try it in your browser →](https://nabvian.github.io/graphspace/)** The playground runs this package unmodified in Pyodide, alongside the benchmark results.
+
 ## Run without installation
 
 ```bash

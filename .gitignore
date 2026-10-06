@@ -5,3 +5,7 @@ build/
 dist/
 .venv/
 .DS_Store
+
+# GitHub Pages build
+_site/
+.pyodide-cache/

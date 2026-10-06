@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Graphspace — typed computational graphs with execution evidence</title>
+<meta name="description" content="Typed computational graphs with resource contracts, memory planning, structured failures and execution evidence. Run the real package in your browser.">
+<meta property="og:title" content="Graphspace — typed computational graphs with execution evidence">
+<meta property="og:description" content="Shapes checked at construction, memory contracts checked before execution, and an execution record that says how each claim is known. Try it in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23143a5c'/%3E%3Ccircle cx='9' cy='10' r='3.2' fill='%2389c4ff'/%3E%3Ccircle cx='9' cy='22' r='3.2' fill='%2389c4ff'/%3E%3Ccircle cx='23' cy='16' r='3.6' fill='white'/%3E%3Cpath d='M11.5 11.5 20 15M11.5 20.5 20 17' stroke='white' stroke-width='1.6'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="#top"><i aria-hidden="true"></i>Graphspace</a>
+    <nav aria-label="Sections">
+      <a href="#features">Features</a>
+      <a href="#playground">Playground</a>
+      <a href="#benchmarks">Benchmarks</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/nabvian/graphspace">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<section class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">Python · Apache-2.0 · v<span data-version>0.1.0</span> · pre-alpha</p>
+      <h1>Computational graphs that say how they know what they claim</h1>
+      <p class="lede">Graphspace builds typed tensor graphs with <strong>resource contracts</strong>. Shapes are checked while the graph is built, memory is planned and checked against the contract before anything runs, and every execution returns a record in which each claim names its basis: <em>declared, proven, estimated, measured</em>.</p>
+      <div class="hero-actions">
+        <a class="button" href="#playground">Run it in your browser</a>
+        <a class="button ghost" href="https://github.com/nabvian/graphspace">View source</a>
+      </div>
+      <pre class="install-line"><code>pip install git+https://github.com/nabvian/graphspace</code></pre>
+    </div>
+    <div class="hero-code card">
+      <div class="code-head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span>examples/demo.py</span></div>
+<pre><code><span class="k">from</span> graphspace <span class="k">import</span> Graph, ResourceContract, TensorSpec
+
+graph = Graph(<span class="s">"classifier"</span>,
+              ResourceContract.max_memory(<span class="n">65536</span>, deterministic=<span class="k">True</span>))
+spec = TensorSpec((<span class="n">2</span>, <span class="n">4</span>), dtype=<span class="s">"float32"</span>, role=<span class="s">"activation"</span>)
+graph.input(<span class="s">"left"</span>, spec)
+graph.input(<span class="s">"right"</span>, spec)
+graph.output(graph.relu(graph.add(<span class="s">"left"</span>, <span class="s">"right"</span>)))
+
+result, record = graph.execute({<span class="s">"left"</span>: [<span class="n">1.0</span>] * <span class="n">8</span>,
+                                <span class="s">"right"</span>: [<span class="n">-2.0</span>] * <span class="n">8</span>})
+record.claim(<span class="s">"peak_memory_bytes"</span>)   <span class="c"># Claim(..., basis=ESTIMATED)</span></code></pre>
+    </div>
+  </div>
+  <div class="wrap stats" id="stats"></div>
+</section>
+
+<section id="features" class="band">
+  <div class="wrap">
+    <p class="eyebrow">What it does</p>
+    <h2>Five guarantees, each checkable</h2>
+    <div class="features">
+      <article class="feature"><b>Typed tensor specs</b><p>Shape, dtype, layout and role. Dimensions can be symbolic (<code>"N"</code>); a symbolic dimension broadcasts only against itself or 1, and reshape must preserve the element count provably.</p></article>
+      <article class="feature"><b>Errors at construction</b><p>A shape or dtype mismatch raises while the graph is being built, before any data exists, naming the node, the expected and actual values, and a remediation.</p></article>
+      <article class="feature"><b>Resource contracts</b><p>Declare a memory limit and determinism. The memory plan is checked against the limit at validation; a limit that cannot be verified because a dimension is unbound is refused, not assumed.</p></article>
+      <article class="feature"><b>Memory planning</b><p>Liveness, buffer reuse and peak memory from declared dtypes, including a per-call bookkeeping allowance calibrated for each CPython version from 3.10 to 3.14.</p></article>
+      <article class="feature"><b>Execution evidence</b><p>Every run returns an <code>ExecutionRecord</code>: graph digest, optional input/output digests, and claims whose basis says how each is known.</p></article>
+    </div>
+  </div>
+</section>
+
+<section id="playground">
+  <div class="wrap">
+    <p class="eyebrow">Interactive · the real package, running in your browser</p>
+    <h2>Playground</h2>
+    <p class="section-copy">Pick an example or write your own. Define <code>graph</code>; optionally define <code>values</code> to execute and <code>dims</code> to bind symbolic dimensions. The code runs on the unmodified <code>graphspace</code> package inside <a href="https://pyodide.org">Pyodide</a> (CPython compiled to WebAssembly) — nothing is sent to a server.</p>
+    <div class="runtime" id="runtime" role="status" aria-live="polite"><span class="dot"></span><span id="runtime-text">Loading Python…</span></div>
+    <div class="examples" id="examples" role="tablist" aria-label="Examples"></div>
+    <div class="play">
+      <div class="editor card">
+        <div class="editor-head"><span id="editor-title">playground.py</span><span class="kbd">Ctrl/⌘ + Enter to run</span></div>
+        <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Python code"></textarea>
+        <div class="editor-actions">
+          <button type="button" class="button" id="run" disabled>Run</button>
+          <button type="button" class="button ghost" id="reset">Reset example</button>
+        </div>
+      </div>
+      <div class="output">
+        <ol class="pipeline" id="pipeline" aria-label="Stages"></ol>
+        <div id="failure"></div>
+        <div class="tabs" role="tablist" aria-label="Output">
+          <button type="button" role="tab" aria-selected="true" data-tab="graph">Graph</button>
+          <button type="button" role="tab" aria-selected="false" data-tab="memory">Memory plan</button>
+          <button type="button" role="tab" aria-selected="false" data-tab="claims">Claims</button>
+          <button type="button" role="tab" aria-selected="false" data-tab="record">Execution record</button>
+          <button type="button" role="tab" aria-selected="false" data-tab="console">Console</button>
+        </div>
+        <div class="card panel" id="panel" aria-live="polite"><p class="muted">Run an example to see the graph, its memory plan, the analysis claims and the execution record.</p></div>
+      </div>
+    </div>
+    <details class="basis-legend card">
+      <summary>What each claim basis means</summary>
+      <div id="basis-table"></div>
+    </details>
+  </div>
+</section>
+
+<section id="benchmarks" class="band">
+  <div class="wrap">
+    <p class="eyebrow">Benchmarks · thresholds fixed before each run</p>
+    <h2>Measured against ordinary NumPy</h2>
+    <p class="section-copy">Each round's thresholds were written and committed before it ran, and failed rounds are kept. Measured on one machine: <span id="env-line"></span>. Every number below is read from <code>benchmarks/results/</code>.</p>
+    <div class="card">
+      <h3>Verdicts by round</h3>
+      <div id="rounds-table"></div>
+      <p class="muted small">T0 correctness against a float64 reference · T1 median time ≤ 1.10 × NumPy · T2 measured memory ≤ estimated peak · T3 measured memory below NumPy. Round 1 failed T1 and T2; the per-graph plan cache and the bookkeeping allowance in round 2 are what fixed them.</p>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div><h3>Time relative to NumPy (T1)</h3><p class="muted small">Median ratio across ten independent runs, with the range of single runs. Left of 1.00 is faster than NumPy; the threshold is 1.10.</p></div>
+        <div class="seg" id="seg-round" role="tablist" aria-label="Round"><button type="button" role="tab" aria-selected="true" data-round="round4">Round 4 · model blocks</button><button type="button" role="tab" aria-selected="false" data-round="round3">Round 3 · workloads</button></div>
+      </div>
+      <div class="legend" aria-hidden="true"><span><i class="sw s1"></i>median ratio</span><span><i class="sw range"></i>min–max of 10 runs</span><span><i class="sw dash"></i>threshold 1.10</span></div>
+      <div id="chart-ratio" class="chart"></div>
+      <details class="table-view"><summary>Table view</summary><div id="table-ratio"></div></details>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>Memory: estimate vs measured (round 4)</h3>
+        <p class="muted small">Graphspace's worst measured peak over ten runs stays under its own estimate (T2) and under NumPy's best (T3).</p>
+        <div class="legend" aria-hidden="true"><span><i class="sw s3"></i>estimated peak</span><span><i class="sw s1"></i>graphspace measured (max)</span><span><i class="sw s2"></i>NumPy measured (min)</span></div>
+        <div id="chart-memory" class="chart"></div>
+        <details class="table-view"><summary>Table view</summary><div id="table-memory"></div></details>
+      </div>
+      <div class="card">
+        <h3>Bookkeeping allowance on held-out graphs</h3>
+        <p class="muted small">Per-call executor overhead measured on 300 random graphs not used for fitting (CPython <span id="scatter-py"></span>). Points under the line are covered by the estimate.</p>
+        <div class="legend" aria-hidden="true"><span><i class="sw s2"></i>first (cold) call</span><span><i class="sw s1"></i>later (warm) call</span><span><i class="sw dash"></i>allowance</span></div>
+        <div id="chart-calibration" class="chart"></div>
+        <p class="muted small" id="calibration-note"></p>
+        <div id="coverage" class="coverage"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap two-col">
+    <div>
+      <p class="eyebrow">Get started</p>
+      <h2>Install and run</h2>
+<pre class="block"><code># the core uses only the Python standard library
+pip install git+https://github.com/nabvian/graphspace
+# optional NumPy backend
+pip install 'graphspace[numpy] @ git+https://github.com/nabvian/graphspace'
+
+graphspace                      # the CLI
+python3 examples/demo.py        # the demo above
+python3 -m unittest discover -s tests -v</code></pre>
+      <p>Tested with Python 3.10–3.14 and NumPy 1.22–2.5. In the playground only the pure-Python backend is available; <code>backend="numpy"</code> works locally.</p>
+      <p><a href="https://github.com/nabvian/graphspace/blob/main/docs/API.md">API reference</a> · <a href="https://github.com/nabvian/graphspace/blob/main/docs/BENCHMARK_THRESHOLDS.md">Benchmark thresholds</a> · <a href="https://github.com/nabvian/graphspace/blob/main/docs/API_STABILITY.md">API stability</a> · <a href="https://github.com/nabvian/graphspace/blob/main/CHANGELOG.md">Changelog</a></p>
+    </div>
+    <div>
+      <p class="eyebrow">Limitations, as documented</p>
+      <h2>What it does not do</h2>
+      <ul class="plain">
+        <li>The <code>python</code> backend computes float dtypes in Python <code>float</code> precision; the <code>numpy</code> backend computes in the declared dtype.</li>
+        <li>Float overflow, division by zero and invalid operations follow IEEE rules without warnings.</li>
+        <li>Peak memory is an estimate. It does not cover the one-time cost of loading a backend, inputs converted from another dtype, or the widened temporaries used to check integer overflow. The allowance is calibrated for CPython, so figures shown in this WebAssembly playground are CPython estimates, not measurements of the browser.</li>
+        <li><code>ExecutionRecord.deterministic</code> is the declared contract. The PyTorch adapter validates shape and dtype only. Graphs have no conditional routing.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p>Graphspace by Koushik Das · <a href="https://github.com/nabvian/graphspace">github.com/nabvian/graphspace</a> · Apache License 2.0.</p>
+    <p>The playground runs on <a href="https://pyodide.org">Pyodide</a> <span id="pyodide-version"></span> (Mozilla Public License 2.0), served from this site. Package build <span class="hash" id="package-hash"></span>.</p>
+  </div>
+</footer>
+<script type="module" src="app.js"></script>
+</body>
+</html>

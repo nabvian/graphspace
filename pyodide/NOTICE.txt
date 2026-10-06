@@ -1,0 +1,2 @@
+Pyodide 0.29.3, https://pyodide.org, redistributed unmodified from the npm package.
+Licensed under the Mozilla Public License 2.0: https://github.com/pyodide/pyodide/blob/main/LICENSE

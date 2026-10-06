@@ -1,0 +1,42 @@
+[
+ {
+  "id": "01_classifier",
+  "title": "The README example: two inputs, add, ReLU, under a 64 KiB memory contract.",
+  "code": "# The README example: two inputs, add, ReLU, under a 64 KiB memory contract.\nfrom graphspace import Graph, ResourceContract, TensorSpec\n\ngraph = Graph(\"classifier\", ResourceContract.max_memory(65536, deterministic=True))\nspec = TensorSpec((2, 4), dtype=\"float32\", role=\"activation\")\ngraph.input(\"left\", spec)\ngraph.input(\"right\", spec)\nhidden = graph.add(\"left\", \"right\")\ngraph.output(graph.relu(hidden))\n\nvalues = {\"left\": [1.0] * 8, \"right\": [-2.0, 3.0] * 4}\n"
+ },
+ {
+  "id": "02_mlp",
+  "title": "A two-layer MLP with a symbolic batch dimension \"N\".",
+  "code": "# A two-layer MLP with a symbolic batch dimension \"N\".\n# N is bound from the input sizes at execution time.\nfrom graphspace import Graph, ResourceContract, TensorSpec\n\ngraph = Graph(\"mlp\", ResourceContract.max_memory(1_000_000))\ngraph.input(\"x\", TensorSpec((\"N\", 4), dtype=\"float32\", role=\"activation\"))\ngraph.input(\"w1\", TensorSpec((4, 3), dtype=\"float32\", role=\"weight\"))\ngraph.input(\"b1\", TensorSpec((3,), dtype=\"float32\", role=\"weight\"))\ngraph.input(\"w2\", TensorSpec((3, 2), dtype=\"float32\", role=\"weight\"))\n\nh = graph.relu(graph.add(graph.matmul(\"x\", \"w1\"), \"b1\"))\ngraph.output(graph.softmax(graph.matmul(h, \"w2\")))\n\ndims = {\"N\": 2}   # bind N so the memory contract can be checked before running\nvalues = {\n    \"x\":  [0.5, -1.0, 2.0, 0.0,   1.0, 1.0, -0.5, 0.25],\n    \"w1\": [0.1, 0.2, -0.3,  0.4, -0.5, 0.6,  0.7, 0.8, -0.9,  0.2, 0.1, 0.0],\n    \"b1\": [0.0, 0.1, -0.1],\n    \"w2\": [1.0, -1.0,  0.5, 0.5,  -0.25, 0.75],\n}\n"
+ },
+ {
+  "id": "03_attention",
+  "title": "Single-head self-attention scores with a residual and layer norm.",
+  "code": "# Single-head self-attention scores with a residual and layer norm.\nfrom graphspace import Graph, ResourceContract, TensorSpec\n\ngraph = Graph(\"attention\", ResourceContract.max_memory(2_000_000, deterministic=True))\nf32 = lambda shape, role=\"activation\": TensorSpec(shape, dtype=\"float32\", role=role)\ngraph.input(\"x\", f32((\"S\", 4)))\ngraph.input(\"wq\", f32((4, 4), \"weight\"))\ngraph.input(\"wk\", f32((4, 4), \"weight\"))\ngraph.input(\"wv\", f32((4, 4), \"weight\"))\ngraph.input(\"gamma\", f32((4,), \"weight\"))\ngraph.input(\"beta\", f32((4,), \"weight\"))\n\nq = graph.matmul(\"x\", \"wq\")\nk = graph.matmul(\"x\", \"wk\")\nv = graph.matmul(\"x\", \"wv\")\nscores = graph.softmax(graph.scale(graph.matmul(q, graph.transpose(k)), 0.5))\nattended = graph.matmul(scores, v)\ngraph.output(graph.layer_norm(graph.add(attended, \"x\"), \"gamma\", \"beta\"))\n\ndims = {\"S\": 3}\neye = [1.0 if i == j else 0.0 for i in range(4) for j in range(4)]\nvalues = {\"x\": [0.1 * i for i in range(12)], \"wq\": eye, \"wk\": eye, \"wv\": eye,\n          \"gamma\": [1.0] * 4, \"beta\": [0.0] * 4}\n"
+ },
+ {
+  "id": "04_shape_error",
+  "title": "A shape error is caught while the graph is being built,",
+  "code": "# A shape error is caught while the graph is being built,\n# before any data exists, with the expected and actual shapes.\nfrom graphspace import Graph, TensorSpec\n\ngraph = Graph(\"broken\")\ngraph.input(\"a\", TensorSpec((2, 4), dtype=\"float32\"))\ngraph.input(\"b\", TensorSpec((3, 4), dtype=\"float32\"))\ngraph.add(\"a\", \"b\")          # (2, 4) and (3, 4) do not broadcast\n"
+ },
+ {
+  "id": "05_memory_contract",
+  "title": "The memory plan is checked against the declared contract at validation,",
+  "code": "# The memory plan is checked against the declared contract at validation,\n# before execution: 2 KiB cannot hold this graph's buffers and bookkeeping.\nfrom graphspace import Graph, ResourceContract, TensorSpec\n\ngraph = Graph(\"too_small\", ResourceContract.max_memory(2048))\nspec = TensorSpec((64, 64), dtype=\"float32\")\ngraph.input(\"a\", spec)\ngraph.input(\"b\", spec)\ngraph.output(graph.relu(graph.multiply(\"a\", \"b\")))\n\nvalues = {\"a\": [1.0] * 4096, \"b\": [0.5] * 4096}\n"
+ },
+ {
+  "id": "06_unbound_dims",
+  "title": "With a symbolic dimension left unbound, peak memory is unknown,",
+  "code": "# With a symbolic dimension left unbound, peak memory is unknown,\n# so a memory limit cannot be verified: the contract is refused, not assumed.\nfrom graphspace import Graph, ResourceContract, TensorSpec\n\ngraph = Graph(\"unbound\", ResourceContract.max_memory(10_000))\ngraph.input(\"x\", TensorSpec((\"N\", 8), dtype=\"float32\"))\ngraph.output(graph.relu(\"x\"))\n# Try: dims = {\"N\": 4}\n"
+ },
+ {
+  "id": "07_integer_overflow",
+  "title": "Integer results outside the dtype's range raise instead of silently wrapping.",
+  "code": "# Integer results outside the dtype's range raise instead of silently wrapping.\nfrom graphspace import Graph, TensorSpec\n\ngraph = Graph(\"int32_sum\")\nspec = TensorSpec((4,), dtype=\"int32\")\ngraph.input(\"a\", spec)\ngraph.input(\"b\", spec)\ngraph.output(graph.add(\"a\", \"b\"))\n\nvalues = {\"a\": [100, 20, -5, 2_147_483_647], \"b\": [27, 1, -3, 1]}   # last pair overflows int32\n"
+ },
+ {
+  "id": "08_reshape_symbolic",
+  "title": "Reshape must preserve the element count provably, symbolic dimensions included.",
+  "code": "# Reshape must preserve the element count provably, symbolic dimensions included.\nfrom graphspace import Graph, TensorSpec\n\ngraph = Graph(\"reshape\")\ngraph.input(\"x\", TensorSpec((\"N\", 6), dtype=\"float32\"))\nflat = graph.reshape(\"x\", (\"N\", 2, 3))   # fine: N*6 == N*2*3\ngraph.output(graph.reshape(flat, (3, \"N\", 2)))\ndims = {\"N\": 2}\nvalues = {\"x\": [float(i) for i in range(12)]}\n"
+ }
+]

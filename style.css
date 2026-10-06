@@ -96,7 +96,7 @@ h3 { margin: 0 0 4px; font-size: 16.5px; }
 .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .examples button { padding: 6px 12px; border: 1px solid var(--line); border-radius: 99px; background: var(--surface-1); color: var(--text-primary); font: inherit; font-size: 13.5px; cursor: pointer; }
 .examples button[aria-selected="true"] { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); font-weight: 650; }
-.examples button .tag { margin-left: 6px; font-size: 11px; font-weight: 700; color: var(--bad); }
+.examples button .tag { margin-left: 6px; font-size: 11px; font-weight: 700; color: var(--warn); }
 .play { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 16px; align-items: start; }
 .editor { padding: 0; overflow: hidden; background: var(--code-bg); border-color: transparent; }
 .editor-head { display: flex; justify-content: space-between; padding: 10px 14px; color: #8a9bb3; font-size: 12px; border-bottom: 1px solid rgba(255,255,255,.08); }
@@ -111,6 +111,10 @@ h3 { margin: 0 0 4px; font-size: 16.5px; }
 .pipeline li.fail { color: var(--bad); background: var(--bad-soft); border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
 .failure { margin-bottom: 12px; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--bad) 40%, transparent); border-left: 4px solid var(--bad); border-radius: 12px; background: var(--bad-soft); }
 .failure h3 { color: var(--bad); margin-bottom: 6px; }
+.failure.expected { border-color: color-mix(in srgb, var(--warn) 45%, transparent); border-left-color: var(--warn); background: var(--warn-soft); }
+.failure.expected h3 { color: var(--warn); }
+.expected-note { margin: 0 0 8px; padding: 6px 10px; border-radius: 8px; background: var(--good-soft); color: var(--good); font-size: 13.5px; font-weight: 600; }
+.pipeline li.caught { color: var(--warn); background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 35%, transparent); }
 .failure dl { margin: 6px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 13.5px; }
 .failure dt { color: var(--text-muted); }
 .failure dd { margin: 0; overflow-wrap: anywhere; }

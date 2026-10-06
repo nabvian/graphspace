@@ -45,7 +45,7 @@ const FAILS = new Set(["04_shape_error", "05_memory_contract", "06_unbound_dims"
 const LABELS = { "01_classifier": "Classifier", "02_mlp": "MLP · symbolic batch", "03_attention": "Attention block", "04_shape_error": "Shape error", "05_memory_contract": "Memory contract", "06_unbound_dims": "Unbound dimension", "07_integer_overflow": "Integer overflow", "08_reshape_symbolic": "Symbolic reshape" };
 const codeEl = $("#code");
 let current = examples[0], lastReport = null, activeTab = "graph";
-$("#examples").innerHTML = examples.map((e, i) => `<button type="button" role="tab" aria-selected="${i === 0}" data-id="${e.id}">${esc(LABELS[e.id] ?? e.id)}${FAILS.has(e.id) ? '<span class="tag">fails</span>' : ""}</button>`).join("");
+$("#examples").innerHTML = examples.map((e, i) => `<button type="button" role="tab" aria-selected="${i === 0}" data-id="${e.id}">${esc(LABELS[e.id] ?? e.id)}${FAILS.has(e.id) ? '<span class="tag">error demo</span>' : ""}</button>`).join("");
 const loadExample = (id) => {
   current = examples.find((e) => e.id === id);
   document.querySelectorAll("#examples button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.id === id)));
@@ -90,9 +90,12 @@ document.querySelector(".tabs").addEventListener("click", (e) => {
 
 function renderReport() {
   const r = lastReport, stages = ["construction", "validation", "execution"];
-  $("#pipeline").innerHTML = stages.map((s) => { const st = r.stages.find((x) => x.stage === s); return `<li class="${st ? (st.ok ? "ok" : "fail") : ""}">${s}${st ? (st.ok ? " ✓" : " ✗") : ""}</li>`; }).join("");
+  const caught = r.failure && FAILS.has(current.id) && codeEl.value === current.code;
+  $("#pipeline").innerHTML = stages.map((s) => { const st = r.stages.find((x) => x.stage === s); return `<li class="${st ? (st.ok ? "ok" : caught ? "caught" : "fail") : ""}">${s}${st ? (st.ok ? " ✓" : caught ? " · caught" : " ✗") : ""}</li>`; }).join("");
   const f = r.failure;
-  $("#failure").innerHTML = f ? `<div class="failure"><h3>${esc(f.type)} at ${esc(f.stage)}</h3><div>${esc(f.message)}</div><dl>${["code", "graph", "node", "expected", "actual", "remediation"].filter((k) => f[k] != null).map((k) => `<dt>${k}</dt><dd>${esc(fmt(f[k]))}</dd>`).join("")}</dl></div>` : "";
+  // An example built to fail, run unedited, is a demonstration, not a breakage: say so.
+  const expected = f && FAILS.has(current.id) && codeEl.value === current.code;
+  $("#failure").innerHTML = f ? `<div class="failure ${expected ? "expected" : ""}">${expected ? `<p class="expected-note">✓ Caught as expected: this example is built to fail, to show Graphspace stopping the mistake at the <b>${esc(f.stage)}</b> stage.</p>` : ""}<h3>${esc(f.type)} at ${esc(f.stage)}</h3><div>${esc(f.message)}</div><dl>${["code", "graph", "node", "expected", "actual", "remediation"].filter((k) => f[k] != null).map((k) => `<dt>${k}</dt><dd>${esc(fmt(f[k]))}</dd>`).join("")}</dl></div>` : "";
   if (f && activeTab === "record" && !r.record) activeTab = r.graph ? "graph" : "console";
   document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", String(x.dataset.tab === activeTab)));
   renderPanel();

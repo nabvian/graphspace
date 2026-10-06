@@ -42,10 +42,12 @@ const BASIS = [
 table($("#basis-table"), [{ label: "basis", html: (r) => `<span class="basis ${r[0]}">${r[0]}</span>` }, { label: "meaning", value: (r) => r[1] }], BASIS);
 
 const FAILS = new Set(["04_shape_error", "05_memory_contract", "06_unbound_dims", "07_integer_overflow"]);
-const LABELS = { "01_classifier": "Classifier", "02_mlp": "MLP · symbolic batch", "03_attention": "Attention block", "04_shape_error": "Shape error", "05_memory_contract": "Memory contract", "06_unbound_dims": "Unbound dimension", "07_integer_overflow": "Integer overflow", "08_reshape_symbolic": "Symbolic reshape" };
+const LABELS = { "01_classifier": "Classifier", "02_mlp": "MLP · symbolic batch", "03_attention": "Attention block", "04_shape_error": "Shape mismatch", "05_memory_contract": "Over the memory limit", "06_unbound_dims": "Unverifiable limit", "07_integer_overflow": "Integer overflow", "08_reshape_symbolic": "Symbolic reshape" };
 const codeEl = $("#code");
 let current = examples[0], lastReport = null, activeTab = "graph";
-$("#examples").innerHTML = examples.map((e, i) => `<button type="button" role="tab" aria-selected="${i === 0}" data-id="${e.id}">${esc(LABELS[e.id] ?? e.id)}${FAILS.has(e.id) ? '<span class="tag">error demo</span>' : ""}</button>`).join("");
+const exButton = (e) => `<button type="button" role="tab" aria-selected="${e === examples[0]}" data-id="${e.id}"${FAILS.has(e.id) ? ' class="catch"' : ""}>${esc(LABELS[e.id] ?? e.id)}</button>`;
+$("#examples").innerHTML = `<span class="group-label">Working graphs</span>${examples.filter((e) => !FAILS.has(e.id)).map(exButton).join("")}`
+  + `<span class="group-label">Mistakes it catches</span>${examples.filter((e) => FAILS.has(e.id)).map(exButton).join("")}`;
 const loadExample = (id) => {
   current = examples.find((e) => e.id === id);
   document.querySelectorAll("#examples button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.id === id)));

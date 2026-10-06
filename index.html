@@ -20,6 +20,7 @@
       <a href="#playground">Playground</a>
       <a href="#benchmarks">Benchmarks</a>
       <a href="#install">Install</a>
+      <a href="#roadmap">Roadmap</a>
       <a href="https://github.com/nabvian/graphspace">GitHub</a>
     </nav>
   </div>
@@ -75,7 +76,7 @@ record.claim(<span class="s">"peak_memory_bytes"</span>)   <span class="c"># Cla
   <div class="wrap">
     <p class="eyebrow">Interactive · the real package, running in your browser</p>
     <h2>Playground</h2>
-    <p class="section-copy">Pick an example or write your own. Examples tagged <b>error demo</b> are built to fail, to show where each kind of mistake is caught. Define <code>graph</code>; optionally define <code>values</code> to execute and <code>dims</code> to bind symbolic dimensions. The code runs on the unmodified <code>graphspace</code> package inside <a href="https://pyodide.org">Pyodide</a> (CPython compiled to WebAssembly) — nothing is sent to a server.</p>
+    <p class="section-copy">Pick an example or write your own. <b>Working graphs</b> build, validate and run. <b>Mistakes it catches</b> are deliberately wrong graphs: each one shows Graphspace refusing the mistake before any wrong number is produced, and says which stage stopped it. Define <code>graph</code>; optionally define <code>values</code> to execute and <code>dims</code> to bind symbolic dimensions. The code runs on the unmodified <code>graphspace</code> package inside <a href="https://pyodide.org">Pyodide</a> (CPython compiled to WebAssembly) — nothing is sent to a server.</p>
     <div class="runtime" id="runtime" role="status" aria-live="polite"><span class="dot"></span><span id="runtime-text">Loading Python…</span></div>
     <div class="examples" id="examples" role="tablist" aria-label="Examples"></div>
     <div class="play">
@@ -171,6 +172,24 @@ python3 -m unittest discover -s tests -v</code></pre>
         <li>Peak memory is an estimate. It does not cover the one-time cost of loading a backend, inputs converted from another dtype, or the widened temporaries used to check integer overflow. The allowance is calibrated for CPython, so figures shown in this WebAssembly playground are CPython estimates, not measurements of the browser.</li>
         <li><code>ExecutionRecord.deterministic</code> is the declared contract. The PyTorch adapter validates shape and dtype only. Graphs have no conditional routing.</li>
       </ul>
+    </div>
+  </div>
+</section>
+
+<section id="roadmap" class="band">
+  <div class="wrap">
+    <p class="eyebrow">Future upgrades · taken from the release checklist and documented limitations</p>
+    <h2>What comes next</h2>
+    <p class="section-copy">Graphspace 0.1 is a working prototype: every item ticked in <a href="https://github.com/nabvian/graphspace/blob/main/docs/RELEASE_CHECKLIST.md">the release checklist</a> is implemented and tested. These are the open items, each one taken from that checklist or from a documented limitation.</p>
+    <div class="roadmap">
+      <article class="road"><span class="chip">Evidence</span><b>Benchmarks on a second machine</b><p>All four benchmark rounds ran on one machine. Repeating them on other hardware will show whether the time and memory results carry over.</p></article>
+      <article class="road"><span class="chip">Evidence</span><b>Trained models and real data</b><p>The round 4 model blocks run on random inputs with scaled weights. The next step is benchmarking trained models on real data.</p></article>
+      <article class="road"><span class="chip">Feature</span><b>Conditional routing</b><p>Graphs have no branches today. Planned: control flow whose shapes, memory and contracts are still checked before execution.</p></article>
+      <article class="road"><span class="chip">Feature</span><b>Deeper PyTorch integration</b><p>The PyTorch adapter checks shape and dtype only. Planned: carry resource contracts and execution records across to PyTorch models.</p></article>
+      <article class="road"><span class="chip">Feature</span><b>Wider memory estimate</b><p>Extend the peak-memory estimate to cover one-time backend loading, inputs converted from another dtype, and the temporaries used for integer-overflow checks.</p></article>
+      <article class="road"><span class="chip">Toward 1.0</span><b>Stabilise the experimental APIs</b><p>Promote the NumPy backend, the claim and basis vocabulary, and the failure value formats from experimental to stable, as set out in <a href="https://github.com/nabvian/graphspace/blob/main/docs/API_STABILITY.md">API stability</a>.</p></article>
+      <article class="road"><span class="chip">Trust</span><b>Signed release artifacts</b><p>The release tag and commits are already signed. Next: PyPI trusted publishing with attestations, so every wheel can be traced to its build.</p></article>
+      <article class="road"><span class="chip">Trust</span><b>Independent security audit</b><p>A static scan and a manual review are done. The next step is an outside audit, followed by community testing and maintenance.</p></article>
     </div>
   </div>
 </section>
